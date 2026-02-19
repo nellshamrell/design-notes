@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: User description: "Radius CLI command that allows me to take an Aspire manifest file (use aspire-manifest.json as an example) and convert it to an app.bicep file that can be deployed with `rad deploy`"
 
+## Clarifications
+
+### Session 2026-02-19
+
+- Q: Where should the command live in the `rad` CLI tree? → A: `rad aspire convert` — new top-level `aspire` command group.
+- Q: Which Aspire resource types should be supported beyond containers and parameters? → A: Containers + parameters + known backing-service types (e.g., Redis, PostgreSQL) mapped to Radius data resources. All other types emit warnings.
+- Q: How should Aspire `external: true` bindings be handled? → A: Generate an `Applications.Core/gateways` resource for containers with external bindings.
+- Q: What is explicitly out of scope for v1? → A: Cloud resource provisioning (Azure/AWS), Dapr integration configuration, and service discovery are all out of scope.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Convert a Basic Aspire Manifest (Priority: P1)
@@ -82,9 +91,9 @@ As a developer whose Aspire manifest contains resource types that have no direct
 
 ### Functional Requirements
 
-- **FR-001**: The CLI MUST provide a new command (under the `rad` command tree) that accepts an Aspire manifest JSON file path as input and produces a Radius-compatible Bicep file as output.
-- **FR-002**: The command MUST parse Aspire manifest resources of type `container.v0` and `container.v1` and map them to `Applications.Core/containers` (or equivalent `Radius.Compute/containers`) Bicep resources with image, ports, environment variables, and command/args.
-- **FR-003**: The command MUST map Aspire container `bindings` (with scheme, protocol, and targetPort) to Radius container `ports` definitions.
+- **FR-001**: The CLI MUST provide the command `rad aspire convert` (a new top-level `aspire` command group) that accepts an Aspire manifest JSON file path as input and produces a Radius-compatible Bicep file as output.
+- **FR-002**: The command MUST parse Aspire manifest resources of type `container.v0` and `container.v1` and map them to `Applications.Core/containers` (or equivalent `Radius.Compute/containers`) Bicep resources with image, ports, environment variables, and command/args. The command MUST also parse known backing-service resource types (e.g., `redis.server.v0`, `postgres.server.v0`) and map them to the corresponding Radius data-store resources (e.g., `Radius.Data/redisCaches`, `Radius.Data/postgreSqlDatabases`). All other unrecognized resource types MUST emit warnings per FR-013.
+- **FR-003**: The command MUST map Aspire container `bindings` (with scheme, protocol, and targetPort) to Radius container `ports` definitions. Bindings marked `external: true` MUST additionally trigger gateway resource generation per FR-017.
 - **FR-004**: The command MUST resolve Aspire expression references (e.g., `{cache.bindings.tcp.host}`) in environment variables and convert them to Bicep resource references or parameter references in the output.
 - **FR-005**: The command MUST map Aspire `parameter.v0` resources with `secret: true` inputs to `@secure()` Bicep parameters.
 - **FR-006**: The command MUST generate a top-level Radius application resource and wire all container resources to it.
@@ -97,10 +106,12 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - **FR-013**: The command MUST warn (to stderr or console) when it encounters an Aspire resource type it cannot map, and include a comment in the generated Bicep at the location where that resource would appear.
 - **FR-014**: The command MUST map Aspire `container.v1` resources with `build` configurations to Radius container resources, using the image reference pattern appropriate for pre-built images (since Radius does not build images). A warning MUST be emitted advising the user to build and push the image separately.
 - **FR-015**: The command MUST map inter-resource connection strings (e.g., `{cache.connectionString}`) to Radius `connections` on the consuming container resource.
+- **FR-016**: The command MUST maintain an explicit mapping table of supported Aspire backing-service resource types to Radius resource types. Initially this MUST include at minimum: Redis → `Radius.Data/redisCaches`, PostgreSQL → `Radius.Data/postgreSqlDatabases`, MySQL → `Radius.Data/mySqlDatabases`. The mapping table MUST be extensible for future additions.
+- **FR-017**: The command MUST generate an `Applications.Core/gateways` (or equivalent `Radius.Compute/routes`) resource for any container whose Aspire bindings include `external: true`. The gateway MUST route to the container’s corresponding port. If multiple bindings on the same container are external, a single gateway with multiple routes MUST be generated.
 
 ### Key Entities
 
-- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry has a `type` (e.g., `container.v0`, `parameter.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type.
+- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry has a `type` (e.g., `container.v0`, `container.v1`, `parameter.v0`, `redis.server.v0`, `postgres.server.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type.
 - **Radius Bicep File**: A `.bicep` file using Radius extensions that defines an application, its container resources, connections, parameters, and supporting resources. Deployable via `rad deploy`.
 - **Resource Mapping**: The association between an Aspire resource type/configuration and its corresponding Radius Bicep resource definition. Each mapping transforms Aspire-specific properties into Radius-specific properties.
 - **Expression Reference**: An Aspire manifest interpolation pattern (e.g., `{resource.bindings.port.host}`) that must be resolved to a Bicep reference expression in the output.
@@ -124,3 +135,13 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - The `rad deploy` command and Radius environment are already set up and functional. This feature only covers the file conversion step.
 - The Aspire manifest conforms to a known schema version (e.g., `aspire-8.0.json`). Graceful degradation is expected for unknown schema versions.
 - `annotated.string` resource types (e.g., URI encoding filters) are treated as pass-through values — the filter behavior is noted in comments but not replicated in the Bicep output.
+
+## Out of Scope (v1)
+
+The following capabilities are explicitly excluded from the initial version of this feature. Aspire manifest resources or configurations related to these areas MUST trigger unsupported-resource warnings (per FR-013) rather than silent omission.
+
+- **Cloud resource provisioning**: Azure, AWS, or GCP resource definitions in Aspire manifests (e.g., `azure.bicep.v0`, `azure.storage.v0`, `aws.sqs.v0`) are not converted. Users must provision these separately and wire them into the Radius environment.
+- **Dapr integration configuration**: Aspire Dapr component resources (e.g., `dapr.component.v0`) are not mapped. Dapr sidecar configuration in Radius is handled through Radius extensions and is outside this conversion tool's scope.
+- **Service discovery**: Aspire's automatic service discovery and URL resolution between resources is not replicated. The generated Bicep uses explicit Radius `connections` for inter-resource communication instead.
+- **Image building**: The tool does not build container images. `container.v1` resources with `build` configurations produce a Radius container resource referencing a placeholder image with a warning (per FR-014).
+- **Aspire toolchain invocation**: The tool does not run `dotnet` commands or invoke the Aspire manifest publisher. The user must provide a pre-generated manifest JSON file.
