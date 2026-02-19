@@ -27,9 +27,9 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 **Purpose**: Create the package structure and wire the new `rad aspire` command group into the existing CLI.
 
-- [ ] T001 Create directory structure `pkg/cli/cmd/aspire/convert/testdata/` in the radius repository
-- [ ] T002 Create parent cobra command `rad aspire` with Use, Short, Long, and Example fields in `pkg/cli/cmd/aspire/aspire.go`
-- [ ] T003 Wire `aspireCmd` into the root command's `initSubCommands()` in `cmd/rad/cmd/root.go`
+- [X] T001 Create directory structure `pkg/cli/cmd/aspire/convert/testdata/` in the radius repository
+- [X] T002 Create parent cobra command `rad aspire` with Use, Short, Long, and Example fields in `pkg/cli/cmd/aspire/aspire.go`
+- [X] T003 Wire `aspireCmd` into the root command's `initSubCommands()` in `cmd/rad/cmd/root.go`
 
 ---
 
