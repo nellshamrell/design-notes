@@ -49,16 +49,15 @@ Converting Aspire manifest: ./aspire-manifest.json
 Converted resources:
   ✓ cache (container.v0) → Radius.Compute/containers
   ✓ app (container.v1) → Radius.Compute/containers
-  ✓ frontend (container.v1) → Radius.Compute/containers
 
 Warnings:
   ⚠ docker-hub: manifest error — This resource does not support generation in the manifest.
   ⚠ app (container.v1): has build configuration — build and push the image before deploying
-  ⚠ frontend (container.v1): has build configuration — build and push the image before deploying
+  ⚠ frontend (container.v1): skipped — build-only artifact (build.buildOnly: true)
   ⚠ cache-password (parameter.v0): unsupported resource type, skipped
   ⚠ cache-password-uri-encoded (annotated.string): unsupported resource type, skipped
 
-Generated: app.bicep (3 containers, 1 gateway, 3 skipped)
+Generated: app.bicep (2 containers, 1 gateway, 4 skipped)
 ```
 
 ## Standard Error (stderr)
@@ -86,6 +85,7 @@ Warning: resource "docker-hub": manifest error — This resource does not suppor
 Warning: resource "cache-password" (parameter.v0): unsupported resource type, adding comment to output
 Warning: resource "cache-password-uri-encoded" (annotated.string): unsupported resource type, adding comment to output
 Warning: resource "app" (container.v1): has build configuration — ensure image is built and pushed before deploying
+Warning: resource "frontend" (container.v1): skipped — build-only artifact (build.buildOnly: true)
 ```
 
 ## Generated Bicep File Structure
@@ -118,6 +118,7 @@ resource app 'Radius.Core/applications@2025-08-01-preview' = {
 // Unsupported: cache-password (parameter.v0) — manual @secure() parameter declaration required
 // Unsupported: cache-password-uri-encoded (annotated.string) — manual configuration required
 // Skipped: docker-hub — manifest error: This resource does not support generation in the manifest.
+// Skipped: frontend — build-only artifact (build.buildOnly: true), not a runtime container
 ```
 
 ## Parent Command: `rad aspire`

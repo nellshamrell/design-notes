@@ -104,9 +104,9 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 ### Implementation for User Story 4
 
 - [X] T026 [US4] Implement unsupported resource type detection: resources not in the mapping table generate `BicepComment` entries and append to `BicepFile.Warnings`. Resources with a non-empty `Error` field (no `type`) MUST be detected first, generate a `BicepComment` with the error message, and append a specific warning (per FR-018) in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T027 [US4] Implement `container.v1` build configuration warning per FR-013: detect `Build` field, set `NeedsBuildWarning` on `BicepContainer`, append advisory warning in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [ ] T027 [US4] Implement `container.v1` build configuration handling per FR-014 and FR-019: detect `Build` field, check `Build.BuildOnly` — if `true`, skip the resource entirely (no Radius resource generated), emit a `BicepComment` noting it is a build-only artifact, and append a warning (per FR-019). If `BuildOnly` is `false` or absent, set `NeedsBuildWarning` on `BicepContainer` and append advisory warning (per FR-014) in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [ ] T028 [US4] Implement conversion summary output in `Run`: print converted resource list, warnings, and generated file stats (container count, gateway count, skipped count) to stdout in `pkg/cli/cmd/aspire/convert/convert.go`
-- [X] T029 [US4] Add unsupported resource, build-warning, and errored-resource (error field, no type) test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
+- [X] T029 [US4] Add unsupported resource, build-warning, buildOnly-exclusion, and errored-resource (error field, no type) test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
 
 **Checkpoint**: User Story 4 complete. All unsupported resources produce actionable warnings.
 
@@ -116,11 +116,11 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 **Purpose**: Edge case handling, full golden file validation, and end-to-end quickstart verification.
 
-- [X] T030 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort), errored resources with `error` field (skip with warning per FR-018) in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T030 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort), errored resources with `error` field (skip with warning per FR-018), buildOnly resources (skip with warning per FR-019) in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [ ] T031 [P] Handle edge cases in command: invalid JSON error message, missing file error message, unreadable file error with descriptive exit code 1 in `pkg/cli/cmd/aspire/convert/convert.go`
-- [X] T032 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + gateways + data stores + unsupported comments + errored-resource comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
+- [X] T032 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + gateways + data stores + unsupported comments + errored-resource comments + buildOnly-skipped comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
 - [ ] T033 Write end-to-end emitter golden file test for full manifest scenario comparing against `expected-full.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
-- [X] T035 Copy `aspire-manifest-invalid-manifest-field.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest-invalid-manifest-field.json` and add a golden file test verifying the errored resource is skipped with a warning comment and all other resources convert correctly
+- [X] T035 Copy `aspire-manifest-invalid-manifest-field.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest-invalid-manifest-field.json` and add a golden file test verifying the errored resource is skipped with a warning comment, the buildOnly resource (`frontend`) is skipped with a build-only comment, and all other resources convert correctly
 - [ ] T034 Run quickstart.md validation: execute full conversion pipeline against both sample manifests (`aspire-manifest.json` and `aspire-manifest-invalid-manifest-field.json`), verify output compiles, review summary output matches quickstart expectations
 
 ---

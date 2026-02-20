@@ -74,13 +74,12 @@ rad aspire convert aspire-manifest.json
 #   Converted resources:
 #     ✓ cache (container.v0) → Radius.Compute/containers
 #     ✓ app (container.v1) → Radius.Compute/containers
-#     ✓ frontend (container.v1) → Radius.Compute/containers
 #   Warnings:
 #     ⚠ app: has build configuration
-#     ⚠ frontend: has build configuration
+#     ⚠ frontend: skipped — build-only artifact (build.buildOnly: true)
 #     ⚠ cache-password: unsupported (parameter.v0)
 #     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
-#   Generated: app.bicep (3 containers, 1 gateway, 2 skipped)
+#   Generated: app.bicep (2 containers, 1 gateway, 3 skipped)
 
 # Build and push your container images (if not already done)
 docker build -t myregistry/app:latest ./app
@@ -102,14 +101,13 @@ rad aspire convert aspire-manifest-invalid-manifest-field.json
 #   Converted resources:
 #     ✓ cache (container.v0) → Radius.Compute/containers
 #     ✓ app (container.v1) → Radius.Compute/containers
-#     ✓ frontend (container.v1) → Radius.Compute/containers
 #   Warnings:
 #     ⚠ docker-hub: manifest error — This resource does not support generation in the manifest.
 #     ⚠ app: has build configuration
-#     ⚠ frontend: has build configuration
+#     ⚠ frontend: skipped — build-only artifact (build.buildOnly: true)
 #     ⚠ cache-password: unsupported (parameter.v0)
 #     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
-#   Generated: app.bicep (3 containers, 1 gateway, 3 skipped)
+#   Generated: app.bicep (2 containers, 1 gateway, 4 skipped)
 
 rad deploy app.bicep
 ```

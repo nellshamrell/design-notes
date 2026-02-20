@@ -5,7 +5,7 @@
 
 ## Summary
 
-New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Resources that the Aspire manifest publisher could not generate (entries with an `error` field instead of a `type` field) are gracefully skipped with warnings. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
+New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Resources that the Aspire manifest publisher could not generate (entries with an `error` field instead of a `type` field) are gracefully skipped with warnings. Build-only container resources (`build.buildOnly: true`) are excluded from conversion entirely as they are build-time artifacts, not runtime containers. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and
 **Target Platform**: Cross-platform CLI (Linux, macOS, Windows) — same as existing `rad` CLI
 **Project Type**: Single project — new package within existing `radius` monorepo
 **Performance Goals**: Sub-second conversion for manifests with up to 50 resources
-**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain; must handle errored manifest entries (resources with `error` field, no `type`) gracefully
+**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain; must handle errored manifest entries (resources with `error` field, no `type`) gracefully; must exclude build-only containers (`build.buildOnly: true`) from conversion
 **Scale/Scope**: Conversion of manifests with 1-50 Aspire resources; ~5-7 new Go source files, ~3-4 test files
 
 ## Constitution Check

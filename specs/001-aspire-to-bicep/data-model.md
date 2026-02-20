@@ -56,7 +56,7 @@ Build configuration for `container.v1` resources.
 |-------|------|-------------|
 | Context | string | Build context directory path. |
 | Dockerfile | string | Dockerfile path relative to context. |
-| BuildOnly | bool | If true, the container is a build artifact only (no runtime). |
+| BuildOnly | bool | If true, the container is a build artifact only (no runtime). Resources with `BuildOnly: true` MUST be excluded from conversion entirely — they do not produce a Radius resource. |
 
 ## Entity: AspireInput
 
@@ -251,6 +251,7 @@ No state machines, no lifecycle management, no persistence.
 | AspireManifest | Must have non-nil `Resources` map |
 | AspireResource | `Type` field must be non-empty |
 | AspireResource (container) | `Image` must be non-empty for `container.v0`; may be empty for `container.v1` with `Build` |
+| AspireResource (container) | If `Build.BuildOnly` is `true`, the resource MUST be skipped during mapping (not converted to a Radius resource) |
 | AspireBinding | `TargetPort` must be > 0 |
 | BicepParameter | `Name` must be a valid Bicep identifier (alphanumeric + underscore, starts with letter) |
 | BicepContainer | `SymbolicName` must be unique across all resources in the BicepFile |

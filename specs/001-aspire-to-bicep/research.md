@@ -142,11 +142,50 @@ This occurs for resources like custom Docker registries, unsupported integration
 
 1. **Parser tests** (`manifest_test.go`): Table-driven tests validating JSON parsing of each Aspire resource type. Tests cover valid inputs, missing fields, malformed JSON, unknown types, and errored resource entries (resources with `error` field, no `type`).
 
-2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution, parameter generation, backing-service mapping, gateway generation for external bindings, and skipping errored resources with appropriate warnings.
+2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution, parameter generation, backing-service mapping, gateway generation for external bindings, skipping errored resources with appropriate warnings, and skipping `buildOnly` resources with appropriate warnings.
 
-3. **Emitter/golden file tests** (`emitter_test.go`): End-to-end tests that parse a full sample manifest, map it, emit Bicep, and compare against golden `.bicep` files in `testdata/`. Uses `testutil.CompareWithGoldenFile` pattern if available, or plain `os.ReadFile + assertEqual`. Includes a golden file test for the `aspire-manifest-invalid-manifest-field.json` manifest to verify errored resources are handled gracefully.
+3. **Emitter/golden file tests** (`emitter_test.go`): End-to-end tests that parse a full sample manifest, map it, emit Bicep, and compare against golden `.bicep` files in `testdata/`. Uses `testutil.CompareWithGoldenFile` pattern if available, or plain `os.ReadFile + assertEqual`. Includes a golden file test for the `aspire-manifest-invalid-manifest-field.json` manifest to verify errored resources and `buildOnly` resources are handled gracefully.
 
 **Rationale**: Follows Principle IV (Testing Pyramid). Table-driven tests are idiomatic Go. Golden file tests catch formatting regressions. No integration tests needed — this is a pure file transformation with no external dependencies.
 
 **Alternatives considered**:
 - Functional tests deploying generated Bicep — valuable but belongs in a separate integration test suite, not in unit tests. Deferred to post-merge validation.
+
+### 9. Build-Only Resource Exclusion (`build.buildOnly: true`)
+
+**Task**: How to handle Aspire `container.v1` resources whose `build` configuration contains `"buildOnly": true`.
+
+**Findings**: The Aspire manifest publisher uses `buildOnly: true` on container resources that are build-time-only artifacts. These resources produce files (e.g., compiled static assets) that are consumed by other containers via the `containerFiles` mechanism during image build, but they do not run as independent services at runtime. Example from `aspire-manifest-invalid-manifest-field.json`:
+
+```json
+"frontend": {
+  "type": "container.v1",
+  "build": {
+    "context": "frontend",
+    "dockerfile": "frontend.Dockerfile",
+    "buildOnly": true
+  },
+  "env": { ... },
+  "bindings": { ... }
+}
+```
+
+In the sample manifest, `frontend` is a build-only container whose output files are consumed by the `app` container via `containerFiles`. The `frontend` container itself should never appear in the Radius deployment because it has no runtime purpose — it only exists to produce static files during the Docker build phase.
+
+**Decision**: Resources with `build.buildOnly: true` MUST be excluded from conversion entirely. The exclusion check occurs **after** error-field detection (FR-018) but **before** normal container mapping (FR-014). The flow is:
+1. Check for `error` field → skip per FR-018
+2. Check for `build.buildOnly: true` → skip per FR-019
+3. Check type in mapping table → unsupported warning per FR-013 if not found
+4. Map normally if type is supported
+
+When a `buildOnly` resource is detected:
+1. Skip the resource (do not generate any Radius resource)
+2. Emit a warning: `Warning: resource "frontend" (container.v1): skipped — build-only artifact (build.buildOnly: true)`
+3. Add a `BicepComment`: `// Skipped: frontend — build-only artifact (build.buildOnly: true), not a runtime container`
+4. Increment the "skipped" counter in the conversion summary
+
+**Rationale**: Build-only containers have no runtime purpose in Radius. Converting them to Radius container resources would create non-functional deployments (the image doesn't expose a service, it only produces build artifacts). Skipping them with a clear warning keeps the generated Bicep clean and accurate while informing the user about what was excluded.
+
+**Alternatives considered**:
+- Convert with a warning (match current FR-014 behavior for build containers) — rejected because `buildOnly` containers are fundamentally different from regular build containers. A regular build container still runs as a service; a `buildOnly` container does not.
+- Silently ignore — rejected because users should know which resources were excluded. Consistent with the error-field handling decision (Research #7).

@@ -14,6 +14,7 @@
 - Q: How should Aspire `external: true` bindings be handled? → A: Generate an `Applications.Core/gateways` resource for containers with external bindings.
 - Q: What is explicitly out of scope for v1? → A: Cloud resource provisioning (Azure/AWS), Dapr integration configuration, service discovery, and parameter/secret handling are all out of scope.
 - Q: How should Aspire resource entries with an `error` field (and no `type` field) be handled? → A: Skip the errored resource gracefully, emit a warning indicating the resource could not be generated in the manifest, and continue converting all remaining resources. The conversion must still succeed.
+- Q: How should Aspire resources with `build.buildOnly: true` be handled? → A: Exclude them entirely from conversion. These are build-time-only artifacts (e.g., a frontend build step that produces static files consumed by another container via `containerFiles`). They do not represent runtime containers and should not produce a Radius resource. A warning MUST be emitted explaining the resource was skipped because it is build-only.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -30,6 +31,7 @@ As a developer with an existing .NET Aspire application, I want to run a single 
 1. **Given** a valid Aspire manifest JSON file containing container resources with bindings and environment variables, **When** the user runs the conversion command pointing to that file, **Then** a valid `app.bicep` file is produced that defines a Radius application with corresponding container resources, ports, and environment variable mappings.
 2. **Given** a valid Aspire manifest, **When** the user runs `rad deploy` against the generated `app.bicep`, **Then** the deployment succeeds without Bicep compilation errors.
 3. **Given** a valid Aspire manifest with inter-resource references (e.g., connection strings referencing other resources), **When** the conversion command runs, **Then** the generated Bicep file uses Radius `connections` to express those dependencies.
+4. **Given** an Aspire manifest containing a `container.v1` resource with `build.buildOnly: true`, **When** the conversion command runs, **Then** that resource is excluded from the generated Bicep output entirely, a warning is emitted identifying it as a build-only artifact, and all other resources are converted normally.
 
 ---
 
@@ -73,6 +75,7 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - What happens when the manifest contains resource types from a newer Aspire schema version than the tool supports? The command should warn about the unrecognized schema version and attempt best-effort conversion.
 - What happens when two Aspire resources would produce Radius resources with the same name? The command should detect the collision and disambiguate (e.g., by appending a suffix) or error clearly.
 - What happens when the manifest contains a resource entry with an `error` field instead of a `type` field (e.g., `"docker-hub": { "error": "This resource does not support generation in the manifest." }`)? The command should skip that resource, emit a warning including the resource name and the error message, include a comment in the generated Bicep, and continue converting all other resources successfully.
+- What happens when a `container.v1` resource has `build.buildOnly: true`? The command should exclude the resource entirely from conversion, emit a warning that the resource is a build-only artifact and was skipped, and include a comment in the generated Bicep. Build-only containers are not runtime containers — they produce artifacts (e.g., static files) consumed by other containers during build time.
 
 ## Requirements *(mandatory)*
 
@@ -90,13 +93,16 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - **FR-011**: The command MUST print a summary after conversion listing the number of resources converted and any warnings.
 - **FR-012**: The command MUST exit with a non-zero exit code and a descriptive error message when the input file is missing, unreadable, or not valid JSON.
 - **FR-013**: The command MUST warn (to stderr or console) when it encounters an Aspire resource type it cannot map, and include a comment in the generated Bicep at the location where that resource would appear.
-- **FR-014**: The command MUST map Aspire `container.v1` resources with `build` configurations to Radius container resources, using the image reference pattern appropriate for pre-built images (since Radius does not build images). A warning MUST be emitted advising the user to build and push the image separately.
+- **FR-014**: The command MUST map `container.v1` resources with `build` configurations (where `build.buildOnly` is absent or `false`) to Radius container resources, using the image reference pattern appropriate for pre-built images (since Radius does not build images). A warning MUST be emitted advising the user to build and push the image separately.
+- **FR-019**: The command MUST exclude `container.v1` resources whose `build` configuration contains `"buildOnly": true`. These resources are build-time-only artifacts that do not represent runtime containers. The command MUST skip the resource entirely (no Radius resource generated), emit a warning to the console identifying the resource as build-only, and include a comment in the generated Bicep noting the exclusion. The `buildOnly` check MUST take precedence over the normal container mapping in FR-014.
 - **FR-015**: The command MUST map inter-resource connection strings (e.g., `{cache.connectionString}`) to Radius `connections` on the consuming container resource.
 - **FR-016**: The command MUST maintain an explicit mapping table of supported Aspire backing-service resource types to Radius resource types. Initially this MUST include at minimum: Redis → `Radius.Data/redisCaches`, PostgreSQL → `Radius.Data/postgreSqlDatabases`, MySQL → `Radius.Data/mySqlDatabases`. The mapping table MUST be extensible for future additions.
 - **FR-017**: The command MUST generate an `Applications.Core/gateways` (or equivalent `Radius.Compute/routes`) resource for any container whose Aspire bindings include `external: true`. The gateway MUST route to the container’s corresponding port. If multiple bindings on the same container are external, a single gateway with multiple routes MUST be generated.- **FR-018**: The command MUST gracefully handle Aspire manifest resource entries that contain an `error` field instead of a `type` field. Such resources MUST be skipped, a warning MUST be emitted to the console including the resource name and the error message text, and a comment MUST be included in the generated Bicep file noting the skipped resource. The presence of errored resources MUST NOT prevent the conversion of remaining valid resources.
+
+**Resource Exclusion Priority**: When evaluating a resource, the command MUST apply exclusion checks in the following order: (1) error field present → skip per FR-018, (2) `build.buildOnly: true` → skip per FR-019, (3) unsupported type → warn per FR-013, (4) supported type → map normally.
 ### Key Entities
 
-- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry typically has a `type` (e.g., `container.v0`, `container.v1`, `redis.server.v0`, `postgres.server.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type. Some resource entries may instead contain an `error` field (with no `type`) indicating the Aspire manifest publisher could not generate that resource (e.g., custom Docker registries or unsupported integrations).
+- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry typically has a `type` (e.g., `container.v0`, `container.v1`, `redis.server.v0`, `postgres.server.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type. Some resource entries may instead contain an `error` field (with no `type`) indicating the Aspire manifest publisher could not generate that resource (e.g., custom Docker registries or unsupported integrations). Container resources with `build.buildOnly: true` are build-time-only artifacts that produce files consumed by other containers but do not run as independent services.
 - **Radius Bicep File**: A `.bicep` file using Radius extensions that defines an application, its container resources, connections, and supporting resources. Deployable via `rad deploy`.
 - **Resource Mapping**: The association between an Aspire resource type/configuration and its corresponding Radius Bicep resource definition. Each mapping transforms Aspire-specific properties into Radius-specific properties.
 - **Expression Reference**: An Aspire manifest interpolation pattern (e.g., `{resource.bindings.port.host}`) that must be resolved to a Bicep reference expression in the output.
@@ -120,6 +126,7 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - The Aspire manifest conforms to a known schema version (e.g., `aspire-8.0.json`). Graceful degradation is expected for unknown schema versions.
 - Some Aspire manifest resource entries may contain an `error` field instead of a `type` field. This occurs when the Aspire manifest publisher cannot serialize a resource (e.g., custom Docker registries, unsupported integrations). The conversion tool treats these as skippable entries.
 - `annotated.string` resource types (e.g., URI encoding filters) are treated as pass-through values — the filter behavior is noted in comments but not replicated in the Bicep output.
+- Aspire `container.v1` resources with `build.buildOnly: true` are build-time artifacts (e.g., a frontend build step that produces static files injected into another container via `containerFiles`). These are not runtime containers and should not be deployed to Radius.
 
 ## Out of Scope (v1)
 
