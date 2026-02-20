@@ -47,8 +47,7 @@ rad aspire convert aspire-manifest.json --application my-aspire-app
 Open `app.bicep` and review:
 
 - **Container resources**: Verify images, ports, and environment variables are correct.
-- **Secure parameters**: Note any `@secure()` parameters — you'll provide values at deploy time.
-- **Warnings**: Check for `// Unsupported:` comments marking resources that need manual attention.
+- **Warnings**: Check for `// Unsupported:` comments marking resources that need manual attention (including `parameter.v0` resources that require manual Bicep parameter declarations).
 - **Build warnings**: If you see comments about build configurations, ensure those images are pre-built and pushed.
 
 ## Step 4: Deploy with Radius
@@ -57,7 +56,7 @@ Open `app.bicep` and review:
 rad deploy app.bicep
 ```
 
-If the Bicep file has secure parameters, you'll be prompted for values or can pass them:
+If you need to supply parameters (e.g., for secrets that were not automatically converted), pass them explicitly:
 
 ```bash
 rad deploy app.bicep --parameters cachePassword=mysecretpassword
@@ -76,19 +75,19 @@ rad aspire convert aspire-manifest.json
 #     ✓ cache (container.v0) → Radius.Compute/containers
 #     ✓ app (container.v1) → Radius.Compute/containers
 #     ✓ frontend (container.v1) → Radius.Compute/containers
-#     ✓ cache-password (parameter.v0) → @secure() parameter
 #   Warnings:
 #     ⚠ app: has build configuration
 #     ⚠ frontend: has build configuration
+#     ⚠ cache-password: unsupported (parameter.v0)
 #     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
-#   Generated: app.bicep (3 containers, 1 parameter, 1 gateway, 1 skipped)
+#   Generated: app.bicep (3 containers, 1 gateway, 2 skipped)
 
 # Build and push your container images (if not already done)
 docker build -t myregistry/app:latest ./app
 docker push myregistry/app:latest
 
-# Update app.bicep with your actual image references, then deploy
-rad deploy app.bicep --parameters cachePassword=mypassword
+# Update app.bicep with your actual image references and add any needed parameters, then deploy
+rad deploy app.bicep
 ```
 
 ## Troubleshooting

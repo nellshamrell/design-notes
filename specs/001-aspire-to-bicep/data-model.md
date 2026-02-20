@@ -59,7 +59,7 @@ Build configuration for `container.v1` resources.
 
 ## Entity: AspireInput
 
-A parameter input definition.
+A parameter input definition. Present in the parse model for manifest completeness, but `parameter.v0` resource mapping is out of scope for v1 (these resources are treated as unsupported).
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -113,7 +113,7 @@ A Bicep parameter declaration.
 |-------|------|-------------|
 | Name | string | Parameter name (e.g., `environment`, `cachePassword`). |
 | Type | string | Bicep type (e.g., `string`). |
-| Secure | bool | Whether to emit `@secure()` decorator. |
+| Secure | bool | Whether to emit `@secure()` decorator. Reserved for future use (parameter.v0 mapping is out of scope for v1). |
 | Description | string | Parameter description for `@description()` decorator. |
 
 ## Entity: BicepResource

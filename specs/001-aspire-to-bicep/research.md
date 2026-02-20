@@ -63,8 +63,9 @@
 
 **Decision**: Implement a regex-based expression parser that extracts reference patterns of the form `{resource.property.path}` and resolves them to:
 - **Bicep resource references**: `{cache.bindings.tcp.host}` → Bicep property reference on the corresponding resource
-- **Parameter references**: `{cache-password.value}` → Bicep parameter reference
 - **Connection string references**: `{cache.connectionString}` → triggers a `connections` entry on the consuming container
+
+**Note**: Parameter references (e.g., `{cache-password.value}` → Bicep parameter reference) were identified in the manifest but `parameter.v0` mapping is out of scope for v1. These expression patterns are documented here for future reference.
 
 **Expression patterns observed in sample manifest**:
 | Pattern | Example | Maps to |
@@ -73,9 +74,9 @@
 | `{resource.bindings.name.port}` | `{cache.bindings.tcp.port}` | Connection port reference |
 | `{resource.bindings.name.url}` | `{app.bindings.http.url}` | Full URL reference |
 | `{resource.bindings.name.targetPort}` | `{app.bindings.http.targetPort}` | Container port ref on self |
-| `{resource.value}` | `{cache-password.value}` | Parameter value |
+| `{resource.value}` | `{cache-password.value}` | Parameter value (out of scope for v1) |
 | `{resource.connectionString}` | `{cache.connectionString}` | Full connection string |
-| `{resource.inputs.name}` | `{cache-password.inputs.value}` | Input parameter |
+| `{resource.inputs.name}` | `{cache-password.inputs.value}` | Input parameter (out of scope for v1) |
 
 **Rationale**: Regex parsing is simple and sufficient for the well-defined Aspire expression format. The expressions are not arbitrary — they follow a predictable `{name.path}` pattern.
 

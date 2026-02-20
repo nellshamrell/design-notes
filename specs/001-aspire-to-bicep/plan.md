@@ -5,7 +5,7 @@
 
 ## Summary
 
-New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), parameters/secrets, and external bindings to their Radius Bicep equivalents. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
+New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
 
 ## Technical Context
 
@@ -17,7 +17,7 @@ New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and
 **Project Type**: Single project — new package within existing `radius` monorepo
 **Performance Goals**: Sub-second conversion for manifests with up to 50 resources
 **Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain
-**Scale/Scope**: Conversion of manifests with 1-50 Aspire resources; ~5-8 new Go source files, ~3-5 test files
+**Scale/Scope**: Conversion of manifests with 1-50 Aspire resources; ~5-7 new Go source files, ~3-4 test files
 
 ## Constitution Check
 
@@ -75,7 +75,6 @@ pkg/cli/cmd/aspire/
 │   └── testdata/
 │       ├── aspire-manifest.json   # Sample input (copy of repo root file)
 │       ├── expected-basic.bicep   # Golden file: basic conversion
-│       ├── expected-secrets.bicep # Golden file: with secure parameters
 │       └── expected-full.bicep    # Golden file: full sample manifest
 
 # Modified files

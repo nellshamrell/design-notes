@@ -50,14 +50,14 @@ Converted resources:
   ✓ cache (container.v0) → Radius.Compute/containers
   ✓ app (container.v1) → Radius.Compute/containers
   ✓ frontend (container.v1) → Radius.Compute/containers
-  ✓ cache-password (parameter.v0) → @secure() parameter
 
 Warnings:
   ⚠ app (container.v1): has build configuration — build and push the image before deploying
   ⚠ frontend (container.v1): has build configuration — build and push the image before deploying
+  ⚠ cache-password (parameter.v0): unsupported resource type, skipped
   ⚠ cache-password-uri-encoded (annotated.string): unsupported resource type, skipped
 
-Generated: app.bicep (3 containers, 1 parameter, 1 gateway, 1 skipped)
+Generated: app.bicep (3 containers, 1 gateway, 2 skipped)
 ```
 
 ## Standard Error (stderr)
@@ -81,6 +81,7 @@ Error: output file already exists: app.bicep (use --force to overwrite)
 Warnings for unsupported or partially-supported resources:
 
 ```
+Warning: resource "cache-password" (parameter.v0): unsupported resource type, adding comment to output
 Warning: resource "cache-password-uri-encoded" (annotated.string): unsupported resource type, adding comment to output
 Warning: resource "app" (container.v1): has build configuration — ensure image is built and pushed before deploying
 ```
@@ -103,10 +104,6 @@ param environment string
 @description('The name of the Radius Application.')
 param applicationName string = 'aspire-app'
 
-@secure()
-@description('Password for the cache resource.')
-param cachePassword string
-
 resource app 'Radius.Core/applications@2025-08-01-preview' = {
   name: applicationName
   properties: {
@@ -116,6 +113,7 @@ resource app 'Radius.Core/applications@2025-08-01-preview' = {
 
 // ... container resources, data-store resources, gateways ...
 
+// Unsupported: cache-password (parameter.v0) — manual @secure() parameter declaration required
 // Unsupported: cache-password-uri-encoded (annotated.string) — manual configuration required
 ```
 

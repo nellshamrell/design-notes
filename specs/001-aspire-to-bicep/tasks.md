@@ -10,7 +10,7 @@
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US3, US4)
 - Include exact file paths in descriptions
 
 ## Path Conventions
@@ -63,8 +63,8 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 - [X] T012 [US1] Implement Aspire binding → `BicepPort` mapping with scheme/protocol/targetPort translation in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [X] T013 [US1] Implement regex-based expression reference parser that extracts `{resource.property.path}` patterns and resolves them to Bicep resource references or parameter references in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [X] T014 [US1] Implement connection generation: detect `connectionString` and binding references across resources and produce `BicepConnection` entries on consuming containers in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [X] T015 [US1] Implement backing-service mapping (redis.server.v0, postgres.server.v0, mysql.server.v0 → Radius data-store `BicepResource`) with mapping table entries per FR-016 in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [X] T016 [US1] Implement gateway/route generation for containers with `external: true` bindings → `BicepGateway` with routes per FR-017 in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T015 [US1] Implement backing-service mapping (redis.server.v0, postgres.server.v0, mysql.server.v0 → Radius data-store `BicepResource`) with mapping table entries per FR-015 in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T016 [US1] Implement gateway/route generation for containers with `external: true` bindings → `BicepGateway` with routes per FR-016 in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [X] T017 [US1] Implement top-level `MapManifest` function orchestrating: extension collection, application resource, environment parameter, iterate resources by type → delegate to container/backing-service/gateway sub-mappers in `pkg/cli/cmd/aspire/convert/mapper.go`
 
 ### Tests for User Story 1
@@ -78,28 +78,7 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 ---
 
-## Phase 4: User Story 2 — Handle Parameters and Secrets (Priority: P2)
-
-**Goal**: Aspire `parameter.v0` resources with `secret: true` inputs are converted to `@secure()` Bicep parameters, and container environment variables referencing parameter values are correctly wired.
-
-**Independent Test**: Convert a manifest containing `parameter.v0` resources with secret inputs → verify output Bicep declares `@secure()` parameters and env vars reference those parameters (no inline secrets). Golden file validates output.
-
-### Implementation for User Story 2
-
-- [ ] T022 [US2] Implement `parameter.v0` resource mapping: detect `secret` flag on inputs, generate `BicepParameter` with `Secure: true` and description in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T023 [US2] Implement parameter value wiring: resolve `{param.value}` and `{param.inputs.name}` expression patterns in container env vars to Bicep parameter references in `pkg/cli/cmd/aspire/convert/mapper.go`
-
-### Tests for User Story 2
-
-- [ ] T024 [P] [US2] Create `expected-secrets.bicep` golden file for secure parameter conversion in `pkg/cli/cmd/aspire/convert/testdata/expected-secrets.bicep`
-- [ ] T025 [P] [US2] Add parameter mapping test cases (secret vs non-secret, value wiring, missing inputs) to `pkg/cli/cmd/aspire/convert/mapper_test.go`
-- [ ] T026 [P] [US2] Add secrets golden file comparison test to `pkg/cli/cmd/aspire/convert/emitter_test.go`
-
-**Checkpoint**: User Stories 1 AND 2 both work. Manifests with containers + parameters + secrets produce correct, secure Bicep output.
-
----
-
-## Phase 5: User Story 3 — Specify Output Path and Overwrite Behavior (Priority: P3)
+## Phase 4: User Story 3 — Specify Output Path and Overwrite Behavior (Priority: P3)
 
 **Goal**: Users control output file path with `--output`, prevent accidental overwrites (default), and allow forced overwrites with `--force`. Custom application name via `--application`.
 
@@ -107,16 +86,16 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Register `--output` (`-o`, default `app.bicep`), `--force` (`-f`), and `--application` (`-a`) flags on the Cobra command in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T028 [US3] Implement `Validate` method: check input file exists via `filesystem.FileSystem`, check output file existence, error if exists and `--force` not set, derive application name from flag or manifest in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T029 [US3] Implement file write in `Run` using `filesystem.FileSystem` to write emitted Bicep string to the resolved output path in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T030 [US3] Write command validation and flag handling tests: missing input, output path default, custom output, overwrite blocked, force overwrite, custom application name in `pkg/cli/cmd/aspire/convert/convert_test.go`
+- [ ] T022 [US3] Register `--output` (`-o`, default `app.bicep`), `--force` (`-f`), and `--application` (`-a`) flags on the Cobra command in `pkg/cli/cmd/aspire/convert/convert.go`
+- [ ] T023 [US3] Implement `Validate` method: check input file exists via `filesystem.FileSystem`, check output file existence, error if exists and `--force` not set, derive application name from flag or manifest in `pkg/cli/cmd/aspire/convert/convert.go`
+- [ ] T024 [US3] Implement file write in `Run` using `filesystem.FileSystem` to write emitted Bicep string to the resolved output path in `pkg/cli/cmd/aspire/convert/convert.go`
+- [ ] T025 [US3] Write command validation and flag handling tests: missing input, output path default, custom output, overwrite blocked, force overwrite, custom application name in `pkg/cli/cmd/aspire/convert/convert_test.go`
 
 **Checkpoint**: User Story 3 complete. Output control and safety features work as expected.
 
 ---
 
-## Phase 6: User Story 4 — Report Unsupported Aspire Resource Types (Priority: P3)
+## Phase 5: User Story 4 — Report Unsupported Aspire Resource Types (Priority: P3)
 
 **Goal**: Unrecognized Aspire resource types produce clear warnings on stderr, comments in the Bicep output, and the conversion summary lists all skipped resources. `container.v1` build configs produce specific advisory warnings.
 
@@ -124,24 +103,24 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Implement unsupported resource type detection: resources not in the mapping table generate `BicepComment` entries and append to `BicepFile.Warnings` in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T032 [US4] Implement `container.v1` build configuration warning per FR-014: detect `Build` field, set `NeedsBuildWarning` on `BicepContainer`, append advisory warning in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T033 [US4] Implement conversion summary output in `Run`: print converted resource list, warnings, and generated file stats (container count, parameter count, gateway count, skipped count) to stdout in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T034 [US4] Add unsupported resource and build-warning test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
+- [ ] T026 [US4] Implement unsupported resource type detection: resources not in the mapping table generate `BicepComment` entries and append to `BicepFile.Warnings` in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [ ] T027 [US4] Implement `container.v1` build configuration warning per FR-013: detect `Build` field, set `NeedsBuildWarning` on `BicepContainer`, append advisory warning in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [ ] T028 [US4] Implement conversion summary output in `Run`: print converted resource list, warnings, and generated file stats (container count, gateway count, skipped count) to stdout in `pkg/cli/cmd/aspire/convert/convert.go`
+- [ ] T029 [US4] Add unsupported resource and build-warning test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
 
 **Checkpoint**: User Story 4 complete. All unsupported resources produce actionable warnings.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 6: Polish & Cross-Cutting Concerns
 
 **Purpose**: Edge case handling, full golden file validation, and end-to-end quickstart verification.
 
-- [ ] T035 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort) in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T036 [P] Handle edge cases in command: invalid JSON error message, missing file error message, unreadable file error with descriptive exit code 1 in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T037 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + secrets + gateways + data stores + unsupported comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
-- [ ] T038 Write end-to-end emitter golden file test for full manifest scenario comparing against `expected-full.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
-- [ ] T039 Run quickstart.md validation: execute full conversion pipeline against sample manifest, verify output compiles, review summary output matches quickstart expectations
+- [ ] T030 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort) in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [ ] T031 [P] Handle edge cases in command: invalid JSON error message, missing file error message, unreadable file error with descriptive exit code 1 in `pkg/cli/cmd/aspire/convert/convert.go`
+- [ ] T032 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + gateways + data stores + unsupported comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
+- [ ] T033 Write end-to-end emitter golden file test for full manifest scenario comparing against `expected-full.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
+- [ ] T034 Run quickstart.md validation: execute full conversion pipeline against sample manifest, verify output compiles, review summary output matches quickstart expectations
 
 ---
 
@@ -151,17 +130,15 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 - **Setup (Phase 1)**: No dependencies — can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion — BLOCKS all user stories
-- **User Stories (Phase 3–6)**: All depend on Foundational phase completion
-  - US1 (Phase 3): Must complete before US2 (Phase 4) since parameter wiring extends mapper logic
-  - US2 (Phase 4): Depends on US1 mapper infrastructure
-  - US3 (Phase 5): Can run in parallel with US1/US2 (different file: convert.go vs mapper.go)
-  - US4 (Phase 6): Can run in parallel with US2/US3 (extends mapper.go but independent logic paths)
-- **Polish (Phase 7)**: Depends on all user stories being complete
+- **User Stories (Phase 3–5)**: All depend on Foundational phase completion
+  - US1 (Phase 3): No story dependencies. **This is the MVP.**
+  - US3 (Phase 4): Can run in parallel with US1 (different file: convert.go vs mapper.go)
+  - US4 (Phase 5): Can run in parallel with US3 (extends mapper.go but independent logic paths)
+- **Polish (Phase 6)**: Depends on all user stories being complete
 
 ### User Story Dependencies
 
 - **User Story 1 (P1)**: Can start after Foundational — no story dependencies. **This is the MVP.**
-- **User Story 2 (P2)**: Depends on US1 mapper infrastructure (expression resolver, MapManifest orchestration)
 - **User Story 3 (P3)**: Independent of other stories — modifies convert.go (command layer), not mapper.go
 - **User Story 4 (P3)**: Depends on US1 mapper infrastructure (mapping table, resource iteration loop)
 
@@ -169,7 +146,7 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 - Implementation tasks before test tasks (tests validate the implementation)
 - Mapping table before specific mappers (T010 before T011–T017)
-- Expression resolver (T013) before connection generation (T014) and parameter wiring (T023)
+- Expression resolver (T013) before connection generation (T014)
 - Top-level orchestrator (T017) after all sub-mappers
 - Golden files can be written in parallel with mapper tests
 
@@ -197,19 +174,11 @@ T020 ── (mapper_test.go — parallel with T019)
 T021 ── (emitter_test.go — parallel with T019–T020)
 ```
 
-**Phase 4 (US2)**:
-```
-T022 → T023 (sequential — mapping then wiring)
-T024 ── (golden file — parallel with T025–T026)
-T025 ── (mapper_test.go — parallel)
-T026 ── (emitter_test.go — parallel)
-```
+**Phase 4 (US3)**: T022 → T023 → T024 → T025 (all in convert.go, sequential)
 
-**Phase 5 (US3)**: T027 → T028 → T029 → T030 (all in convert.go, sequential)
+**Phase 5 (US4)**: T026, T027 can be parallel (different concerns in mapper.go); T028 after both; T029 after T026–T027.
 
-**Phase 6 (US4)**: T031, T032 can be parallel (different concerns in mapper.go); T033 after both; T034 after T031–T032.
-
-**Phase 7 (Polish)**: T035, T036 in parallel (different files); T037 → T038 sequential (golden file then test); T039 last.
+**Phase 6 (Polish)**: T030, T031 in parallel (different files); T032 → T033 sequential (golden file then test); T034 last.
 
 ---
 
@@ -228,11 +197,10 @@ T026 ── (emitter_test.go — parallel)
 
 1. **Setup + Foundational** → Package and types ready
 2. **Add US1** → Core conversion works → Test + validate → **MVP!**
-3. **Add US2** → Secrets handled → Test golden file → Deploy with `--parameters`
-4. **Add US3** → Output control + safety → Test flags
-5. **Add US4** → Warnings + summary → Test with unsupported resources
-6. **Polish** → Edge cases, full golden file, quickstart validation
-7. Each story adds value without breaking previous stories
+3. **Add US3** → Output control + safety → Test flags
+4. **Add US4** → Warnings + summary → Test with unsupported resources
+5. **Polish** → Edge cases, full golden file, quickstart validation
+6. Each story adds value without breaking previous stories
 
 ### Parallel Team Strategy
 
@@ -243,8 +211,8 @@ With multiple developers:
    - Developer A: User Story 1 (mapper.go — core logic)
    - Developer B: User Story 3 (convert.go — command layer, independent of mapper)
 3. After US1 completes:
-   - Developer A: User Story 2 (extends mapper)
-   - Developer B: User Story 4 (extends mapper, independent paths)
+   - Developer A: User Story 4 (extends mapper)
+   - Developer B: continues US3 if needed, or assists with US4
 4. All: Polish phase
 
 ---
@@ -254,7 +222,7 @@ With multiple developers:
 - [P] tasks = different files, no dependencies on incomplete tasks
 - [Story] label maps task to specific user story for traceability
 - All paths are relative to the `radius` repository root
-- The `--output` flag naming may need adjustment if it conflicts with the inherited Cobra output-format flag — resolve during T027 implementation (contract notes `--out-file` as fallback)
+- The `--output` flag naming may need adjustment if it conflicts with the inherited Cobra output-format flag — resolve during T022 implementation (contract notes `--out-file` as fallback)
 - Backing-service mapping uses new-style `Radius.*` resource types per research.md decision; the mapping table (T010) must be easily updatable
 - Golden files are the primary validation mechanism — keep them updated as mapper logic evolves
 - Commit after each task or logical group; stop at any checkpoint to validate independently
