@@ -33,6 +33,7 @@ A single resource entry within the Aspire manifest.
 | Build | *AspireBuild | Build configuration (for `container.v1` with Dockerfile). Nil if not present. |
 | Value | string | Parameter value (for `parameter.v0`). May contain expression references. |
 | Inputs | map[string]AspireInput | Parameter inputs (for `parameter.v0`). |
+| Error | string | Error message from the Aspire manifest publisher (present when the resource could not be generated). When non-empty, the resource has no `type` and should be skipped during conversion. |
 
 ## Entity: AspireBinding
 

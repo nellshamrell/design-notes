@@ -108,17 +108,43 @@
 - Interactive prompt ("Overwrite? y/n") — rejected because the `rad` CLI favors non-interactive commands with explicit flags. Prompts complicate scripting and CI pipelines.
 - Backup existing file (.bak) — rejected per Principle VII; a simple flag is sufficient.
 
-### 7. Testing Strategy
+### 7. Aspire Manifest Error Field Handling
+
+**Task**: How to handle Aspire manifest resource entries that contain an `error` field instead of a `type` field.
+
+**Findings**: The Aspire manifest publisher (`dotnet run --publisher manifest`) sometimes includes resource entries that could not be serialized into the manifest. Instead of the usual resource structure with a `type` field, these entries contain only an `error` field with a human-readable message. Example from `aspire-manifest-invalid-manifest-field.json`:
+
+```json
+"docker-hub": {
+  "error": "This resource does not support generation in the manifest."
+}
+```
+
+This occurs for resources like custom Docker registries, unsupported integrations, or resources that don't have a manifest representation. The entry has no `type`, no `bindings`, no `env` — just the error message.
+
+**Decision**: The parser must deserialize the `error` field into an `Error` string field on `AspireResource`. During mapping, resources with a non-empty `Error` field are detected **before** type-based mapping and handled as follows:
+1. Skip the resource entirely (do not attempt type resolution or mapping)
+2. Emit a warning to stderr: `Warning: resource "docker-hub": manifest error — This resource does not support generation in the manifest.`
+3. Add a `BicepComment` to the output: `// Skipped: docker-hub — manifest error: This resource does not support generation in the manifest.`
+4. Increment the "skipped" counter in the conversion summary
+
+**Rationale**: This is the most resilient approach — the tool acknowledges the errored resource without failing the entire conversion. Users get clear visibility into what was skipped and why. The behavior is consistent with how unsupported resource types (FR-013) are handled, but uses distinct language ("manifest error" vs "unsupported resource type") so users can differentiate between the two cases.
+
+**Alternatives considered**:
+- Fail the entire conversion — rejected because the errored resource is a manifest-publisher issue, not a user error. The remaining resources are perfectly valid and should still be converted.
+- Silently ignore — rejected because users should know which resources were not converted. Silent omission could lead to incomplete deployments.
+
+### 8. Testing Strategy
 
 **Task**: Design the testing approach for the conversion tool.
 
 **Decision**: Three layers of unit tests, all runnable via `make test`:
 
-1. **Parser tests** (`manifest_test.go`): Table-driven tests validating JSON parsing of each Aspire resource type. Tests cover valid inputs, missing fields, malformed JSON, and unknown types.
+1. **Parser tests** (`manifest_test.go`): Table-driven tests validating JSON parsing of each Aspire resource type. Tests cover valid inputs, missing fields, malformed JSON, unknown types, and errored resource entries (resources with `error` field, no `type`).
 
-2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution, parameter generation, backing-service mapping, and gateway generation for external bindings.
+2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution, parameter generation, backing-service mapping, gateway generation for external bindings, and skipping errored resources with appropriate warnings.
 
-3. **Emitter/golden file tests** (`emitter_test.go`): End-to-end tests that parse a full sample manifest, map it, emit Bicep, and compare against golden `.bicep` files in `testdata/`. Uses `testutil.CompareWithGoldenFile` pattern if available, or plain `os.ReadFile + assertEqual`.
+3. **Emitter/golden file tests** (`emitter_test.go`): End-to-end tests that parse a full sample manifest, map it, emit Bicep, and compare against golden `.bicep` files in `testdata/`. Uses `testutil.CompareWithGoldenFile` pattern if available, or plain `os.ReadFile + assertEqual`. Includes a golden file test for the `aspire-manifest-invalid-manifest-field.json` manifest to verify errored resources are handled gracefully.
 
 **Rationale**: Follows Principle IV (Testing Pyramid). Table-driven tests are idiomatic Go. Golden file tests catch formatting regressions. No integration tests needed — this is a pure file transformation with no external dependencies.
 

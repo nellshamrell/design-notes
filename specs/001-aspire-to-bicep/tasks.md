@@ -39,8 +39,8 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [X] T004 Define Aspire manifest Go types (AspireManifest, AspireResource, AspireBinding, AspireBuild, AspireInput, AspireInputDefault, AspireGenerate) with JSON struct tags in `pkg/cli/cmd/aspire/convert/manifest.go`
-- [X] T005 Implement Aspire manifest JSON parser function (`Parse`) that deserializes JSON into AspireManifest, populates resource Name fields from map keys, and validates required fields in `pkg/cli/cmd/aspire/convert/manifest.go`
+- [X] T004 Define Aspire manifest Go types (AspireManifest, AspireResource, AspireBinding, AspireBuild, AspireInput, AspireInputDefault, AspireGenerate) with JSON struct tags in `pkg/cli/cmd/aspire/convert/manifest.go`. AspireResource MUST include an `Error` field (string, `json:"error"`) to capture manifest-publisher errors.
+- [X] T005 Implement Aspire manifest JSON parser function (`Parse`) that deserializes JSON into AspireManifest, populates resource Name fields from map keys, detects resources with `error` fields (no `type`), and validates required fields in `pkg/cli/cmd/aspire/convert/manifest.go`
 - [X] T006 [P] Define Bicep IR Go types (BicepFile, BicepParameter, BicepResource, BicepContainer, BicepPort, BicepEnvVar, BicepConnection, BicepGateway, BicepGatewayRoute, BicepComment) in `pkg/cli/cmd/aspire/convert/emitter.go`
 - [X] T007 [P] Implement Bicep text emitter (`Emit` function) using Go `text/template` with templates for extension declarations, parameters, application resource, containers, data stores, gateways, and unsupported-resource comments in `pkg/cli/cmd/aspire/convert/emitter.go`
 - [X] T008 [P] Copy sample `aspire-manifest.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest.json`
@@ -70,7 +70,7 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 ### Tests for User Story 1
 
 - [X] T018 [P] [US1] Create `expected-basic.bicep` golden file for basic container conversion test in `pkg/cli/cmd/aspire/convert/testdata/expected-basic.bicep`
-- [X] T019 [P] [US1] Write parser unit tests with table-driven cases covering: valid container, valid backing service, missing fields, unknown type, malformed JSON, empty resources in `pkg/cli/cmd/aspire/convert/manifest_test.go`
+- [X] T019 [P] [US1] Write parser unit tests with table-driven cases covering: valid container, valid backing service, missing fields, unknown type, malformed JSON, empty resources, errored resource entry (has `error` field, no `type`) in `pkg/cli/cmd/aspire/convert/manifest_test.go`
 - [X] T020 [P] [US1] Write mapper unit tests with table-driven cases for: container mapping, binding→port, expression resolution, connection generation, backing-service mapping, gateway generation, extension collection in `pkg/cli/cmd/aspire/convert/mapper_test.go`
 - [X] T021 [P] [US1] Write emitter golden file test comparing full Emit output against `expected-basic.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
 
@@ -103,10 +103,10 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Implement unsupported resource type detection: resources not in the mapping table generate `BicepComment` entries and append to `BicepFile.Warnings` in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T026 [US4] Implement unsupported resource type detection: resources not in the mapping table generate `BicepComment` entries and append to `BicepFile.Warnings`. Resources with a non-empty `Error` field (no `type`) MUST be detected first, generate a `BicepComment` with the error message, and append a specific warning (per FR-018) in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [ ] T027 [US4] Implement `container.v1` build configuration warning per FR-013: detect `Build` field, set `NeedsBuildWarning` on `BicepContainer`, append advisory warning in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [ ] T028 [US4] Implement conversion summary output in `Run`: print converted resource list, warnings, and generated file stats (container count, gateway count, skipped count) to stdout in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T029 [US4] Add unsupported resource and build-warning test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
+- [X] T029 [US4] Add unsupported resource, build-warning, and errored-resource (error field, no type) test cases to `pkg/cli/cmd/aspire/convert/mapper_test.go`
 
 **Checkpoint**: User Story 4 complete. All unsupported resources produce actionable warnings.
 
@@ -116,11 +116,12 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 **Purpose**: Edge case handling, full golden file validation, and end-to-end quickstart verification.
 
-- [ ] T030 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort) in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T030 [P] Handle edge cases in mapper: empty manifest (app-only output with warning), dangling references (warn and skip connection), name collisions (disambiguate with suffix), unknown schema version (warn and attempt best-effort), errored resources with `error` field (skip with warning per FR-018) in `pkg/cli/cmd/aspire/convert/mapper.go`
 - [ ] T031 [P] Handle edge cases in command: invalid JSON error message, missing file error message, unreadable file error with descriptive exit code 1 in `pkg/cli/cmd/aspire/convert/convert.go`
-- [ ] T032 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + gateways + data stores + unsupported comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
+- [X] T032 Create `expected-full.bicep` golden file for complete sample manifest conversion (containers + gateways + data stores + unsupported comments + errored-resource comments) in `pkg/cli/cmd/aspire/convert/testdata/expected-full.bicep`
 - [ ] T033 Write end-to-end emitter golden file test for full manifest scenario comparing against `expected-full.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
-- [ ] T034 Run quickstart.md validation: execute full conversion pipeline against sample manifest, verify output compiles, review summary output matches quickstart expectations
+- [X] T035 Copy `aspire-manifest-invalid-manifest-field.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest-invalid-manifest-field.json` and add a golden file test verifying the errored resource is skipped with a warning comment and all other resources convert correctly
+- [ ] T034 Run quickstart.md validation: execute full conversion pipeline against both sample manifests (`aspire-manifest.json` and `aspire-manifest-invalid-manifest-field.json`), verify output compiles, review summary output matches quickstart expectations
 
 ---
 

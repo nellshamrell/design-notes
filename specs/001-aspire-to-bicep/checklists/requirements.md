@@ -34,3 +34,4 @@
 - All items pass validation. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
 - The spec references specific Bicep resource type API versions in the Assumptions section for context, but does not prescribe which version to use — this is deferred to implementation.
 - FR-002 mentions two possible resource type names (`Applications.Core/containers` and `Radius.Compute/containers`) because the project is transitioning naming conventions; the spec does not mandate which to use.
+- FR-018 added (2026-02-20) to handle Aspire manifest resource entries with `error` fields (no `type`). This covers the `aspire-manifest-invalid-manifest-field.json` scenario where resources like `docker-hub` have a manifest-publisher error instead of a resource type. The conversion must still succeed for all other valid resources.

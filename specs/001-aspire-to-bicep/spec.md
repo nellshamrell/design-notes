@@ -13,6 +13,7 @@
 - Q: Which Aspire resource types should be supported beyond containers? → A: Containers + known backing-service types (e.g., Redis, PostgreSQL) mapped to Radius data resources. Parameters/secrets and all other types emit warnings.
 - Q: How should Aspire `external: true` bindings be handled? → A: Generate an `Applications.Core/gateways` resource for containers with external bindings.
 - Q: What is explicitly out of scope for v1? → A: Cloud resource provisioning (Azure/AWS), Dapr integration configuration, service discovery, and parameter/secret handling are all out of scope.
+- Q: How should Aspire resource entries with an `error` field (and no `type` field) be handled? → A: Skip the errored resource gracefully, emit a warning indicating the resource could not be generated in the manifest, and continue converting all remaining resources. The conversion must still succeed.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -71,6 +72,7 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - What happens when a container resource references another resource that is not defined in the manifest (dangling reference)? The command should warn about the unresolved reference and skip that connection.
 - What happens when the manifest contains resource types from a newer Aspire schema version than the tool supports? The command should warn about the unrecognized schema version and attempt best-effort conversion.
 - What happens when two Aspire resources would produce Radius resources with the same name? The command should detect the collision and disambiguate (e.g., by appending a suffix) or error clearly.
+- What happens when the manifest contains a resource entry with an `error` field instead of a `type` field (e.g., `"docker-hub": { "error": "This resource does not support generation in the manifest." }`)? The command should skip that resource, emit a warning including the resource name and the error message, include a comment in the generated Bicep, and continue converting all other resources successfully.
 
 ## Requirements *(mandatory)*
 
@@ -91,11 +93,10 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - **FR-014**: The command MUST map Aspire `container.v1` resources with `build` configurations to Radius container resources, using the image reference pattern appropriate for pre-built images (since Radius does not build images). A warning MUST be emitted advising the user to build and push the image separately.
 - **FR-015**: The command MUST map inter-resource connection strings (e.g., `{cache.connectionString}`) to Radius `connections` on the consuming container resource.
 - **FR-016**: The command MUST maintain an explicit mapping table of supported Aspire backing-service resource types to Radius resource types. Initially this MUST include at minimum: Redis → `Radius.Data/redisCaches`, PostgreSQL → `Radius.Data/postgreSqlDatabases`, MySQL → `Radius.Data/mySqlDatabases`. The mapping table MUST be extensible for future additions.
-- **FR-017**: The command MUST generate an `Applications.Core/gateways` (or equivalent `Radius.Compute/routes`) resource for any container whose Aspire bindings include `external: true`. The gateway MUST route to the container’s corresponding port. If multiple bindings on the same container are external, a single gateway with multiple routes MUST be generated.
-
+- **FR-017**: The command MUST generate an `Applications.Core/gateways` (or equivalent `Radius.Compute/routes`) resource for any container whose Aspire bindings include `external: true`. The gateway MUST route to the container’s corresponding port. If multiple bindings on the same container are external, a single gateway with multiple routes MUST be generated.- **FR-018**: The command MUST gracefully handle Aspire manifest resource entries that contain an `error` field instead of a `type` field. Such resources MUST be skipped, a warning MUST be emitted to the console including the resource name and the error message text, and a comment MUST be included in the generated Bicep file noting the skipped resource. The presence of errored resources MUST NOT prevent the conversion of remaining valid resources.
 ### Key Entities
 
-- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry has a `type` (e.g., `container.v0`, `container.v1`, `redis.server.v0`, `postgres.server.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type.
+- **Aspire Manifest**: A JSON document conforming to the Aspire manifest schema. Contains a `resources` map where each entry typically has a `type` (e.g., `container.v0`, `container.v1`, `redis.server.v0`, `postgres.server.v0`), optional `bindings`, `env`, `connectionString`, `image`, and other properties depending on the type. Some resource entries may instead contain an `error` field (with no `type`) indicating the Aspire manifest publisher could not generate that resource (e.g., custom Docker registries or unsupported integrations).
 - **Radius Bicep File**: A `.bicep` file using Radius extensions that defines an application, its container resources, connections, and supporting resources. Deployable via `rad deploy`.
 - **Resource Mapping**: The association between an Aspire resource type/configuration and its corresponding Radius Bicep resource definition. Each mapping transforms Aspire-specific properties into Radius-specific properties.
 - **Expression Reference**: An Aspire manifest interpolation pattern (e.g., `{resource.bindings.port.host}`) that must be resolved to a Bicep reference expression in the output.
@@ -117,6 +118,7 @@ As a developer whose Aspire manifest contains resource types that have no direct
 - The conversion targets the current Radius Bicep resource schema (e.g., `Applications.Core/containers@2023-10-01-preview` or `Radius.Compute/containers@2025-08-01-preview`). The specific API version used will follow the version conventions active at the time of implementation.
 - The `rad deploy` command and Radius environment are already set up and functional. This feature only covers the file conversion step.
 - The Aspire manifest conforms to a known schema version (e.g., `aspire-8.0.json`). Graceful degradation is expected for unknown schema versions.
+- Some Aspire manifest resource entries may contain an `error` field instead of a `type` field. This occurs when the Aspire manifest publisher cannot serialize a resource (e.g., custom Docker registries, unsupported integrations). The conversion tool treats these as skippable entries.
 - `annotated.string` resource types (e.g., URI encoding filters) are treated as pass-through values — the filter behavior is noted in comments but not replicated in the Bicep output.
 
 ## Out of Scope (v1)

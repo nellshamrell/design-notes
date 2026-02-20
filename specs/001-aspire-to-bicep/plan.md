@@ -5,7 +5,7 @@
 
 ## Summary
 
-New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
+New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Resources that the Aspire manifest publisher could not generate (entries with an `error` field instead of a `type` field) are gracefully skipped with warnings. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and
 **Target Platform**: Cross-platform CLI (Linux, macOS, Windows) — same as existing `rad` CLI
 **Project Type**: Single project — new package within existing `radius` monorepo
 **Performance Goals**: Sub-second conversion for manifests with up to 50 resources
-**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain
+**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain; must handle errored manifest entries (resources with `error` field, no `type`) gracefully
 **Scale/Scope**: Conversion of manifests with 1-50 Aspire resources; ~5-7 new Go source files, ~3-4 test files
 
 ## Constitution Check
@@ -33,7 +33,7 @@ New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and
 | **VI. Open Source and Community-First** | ✅ PASS | Spec authored in design-notes repo; feature discussed before implementation. |
 | **VII. Simplicity Over Cleverness** | ✅ PASS | Direct mapping table approach — no plugin system, no reflection, no AST manipulation. Mapping table is a simple Go map. |
 | **VIII. Separation of Concerns** | ✅ PASS | Clear separation: manifest parsing → resource mapping → Bicep generation. Each is a distinct package/file. |
-| **IX. Incremental Adoption** | ✅ PASS | New command — additive, no breaking changes. Unsupported resources warn rather than fail. |
+| **IX. Incremental Adoption** | ✅ PASS | New command — additive, no breaking changes. Unsupported resources and errored manifest entries warn rather than fail. |
 | **XVI. Repository-Specific Standards** | ✅ PASS | Follows existing `radius` repo CLI patterns: framework.Runner, Cobra commands, filesystem abstraction. |
 | **XVII. Polyglot Project Coherence** | ✅ PASS | Single-repo change (radius). No cross-repo impact on dashboard, docs, or resource-types-contrib (docs update would be a follow-up). |
 

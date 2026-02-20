@@ -52,12 +52,13 @@ Converted resources:
   ✓ frontend (container.v1) → Radius.Compute/containers
 
 Warnings:
+  ⚠ docker-hub: manifest error — This resource does not support generation in the manifest.
   ⚠ app (container.v1): has build configuration — build and push the image before deploying
   ⚠ frontend (container.v1): has build configuration — build and push the image before deploying
   ⚠ cache-password (parameter.v0): unsupported resource type, skipped
   ⚠ cache-password-uri-encoded (annotated.string): unsupported resource type, skipped
 
-Generated: app.bicep (3 containers, 1 gateway, 2 skipped)
+Generated: app.bicep (3 containers, 1 gateway, 3 skipped)
 ```
 
 ## Standard Error (stderr)
@@ -81,6 +82,7 @@ Error: output file already exists: app.bicep (use --force to overwrite)
 Warnings for unsupported or partially-supported resources:
 
 ```
+Warning: resource "docker-hub": manifest error — This resource does not support generation in the manifest.
 Warning: resource "cache-password" (parameter.v0): unsupported resource type, adding comment to output
 Warning: resource "cache-password-uri-encoded" (annotated.string): unsupported resource type, adding comment to output
 Warning: resource "app" (container.v1): has build configuration — ensure image is built and pushed before deploying
@@ -115,6 +117,7 @@ resource app 'Radius.Core/applications@2025-08-01-preview' = {
 
 // Unsupported: cache-password (parameter.v0) — manual @secure() parameter declaration required
 // Unsupported: cache-password-uri-encoded (annotated.string) — manual configuration required
+// Skipped: docker-hub — manifest error: This resource does not support generation in the manifest.
 ```
 
 ## Parent Command: `rad aspire`

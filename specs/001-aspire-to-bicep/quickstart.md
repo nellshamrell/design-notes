@@ -90,6 +90,32 @@ docker push myregistry/app:latest
 rad deploy app.bicep
 ```
 
+## Example: Converting a manifest with errored resources
+
+Some Aspire manifests include resource entries that the manifest publisher could not generate (e.g., custom Docker registries). These entries have an `error` field instead of a `type` field. The conversion command handles these gracefully:
+
+```bash
+# Convert a manifest that includes an errored resource entry
+rad aspire convert aspire-manifest-invalid-manifest-field.json
+
+# Review summary output:
+#   Converted resources:
+#     ✓ cache (container.v0) → Radius.Compute/containers
+#     ✓ app (container.v1) → Radius.Compute/containers
+#     ✓ frontend (container.v1) → Radius.Compute/containers
+#   Warnings:
+#     ⚠ docker-hub: manifest error — This resource does not support generation in the manifest.
+#     ⚠ app: has build configuration
+#     ⚠ frontend: has build configuration
+#     ⚠ cache-password: unsupported (parameter.v0)
+#     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
+#   Generated: app.bicep (3 containers, 1 gateway, 3 skipped)
+
+rad deploy app.bicep
+```
+
+The errored resource (`docker-hub`) is skipped with a warning, and the output Bicep file includes a comment noting the skipped resource. All other resources convert normally.
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -98,4 +124,5 @@ rad deploy app.bicep
 | `Error: invalid JSON` | Manifest file has syntax errors | Validate with `jq . aspire-manifest.json` |
 | `Error: output file already exists` | Target file exists | Use `--force` to overwrite, or `--output` for a different path |
 | Bicep compilation errors | Unsupported resource was mapped incorrectly | Check `// Unsupported:` comments in the Bicep file; edit manually |
+| `⚠ manifest error` warning | Aspire manifest publisher could not generate a resource | The resource is skipped; no action needed unless you expected it to be converted |
 | Missing environment variables | Expression references couldn't be fully resolved | Check warnings; some inter-resource references may need manual Bicep edits |
