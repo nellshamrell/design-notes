@@ -39,12 +39,12 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Define Aspire manifest Go types (AspireManifest, AspireResource, AspireBinding, AspireBuild, AspireInput, AspireInputDefault, AspireGenerate) with JSON struct tags in `pkg/cli/cmd/aspire/convert/manifest.go`
-- [ ] T005 Implement Aspire manifest JSON parser function (`Parse`) that deserializes JSON into AspireManifest, populates resource Name fields from map keys, and validates required fields in `pkg/cli/cmd/aspire/convert/manifest.go`
-- [ ] T006 [P] Define Bicep IR Go types (BicepFile, BicepParameter, BicepResource, BicepContainer, BicepPort, BicepEnvVar, BicepConnection, BicepGateway, BicepGatewayRoute, BicepComment) in `pkg/cli/cmd/aspire/convert/emitter.go`
-- [ ] T007 [P] Implement Bicep text emitter (`Emit` function) using Go `text/template` with templates for extension declarations, parameters, application resource, containers, data stores, gateways, and unsupported-resource comments in `pkg/cli/cmd/aspire/convert/emitter.go`
-- [ ] T008 [P] Copy sample `aspire-manifest.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest.json`
-- [ ] T009 Create convert command skeleton with `NewCommand` (Cobra + flags), `Runner` struct, `Validate` (check manifest arg exists), and `Run` (orchestrate Parse → Map → Emit → Write) in `pkg/cli/cmd/aspire/convert/convert.go`
+- [X] T004 Define Aspire manifest Go types (AspireManifest, AspireResource, AspireBinding, AspireBuild, AspireInput, AspireInputDefault, AspireGenerate) with JSON struct tags in `pkg/cli/cmd/aspire/convert/manifest.go`
+- [X] T005 Implement Aspire manifest JSON parser function (`Parse`) that deserializes JSON into AspireManifest, populates resource Name fields from map keys, and validates required fields in `pkg/cli/cmd/aspire/convert/manifest.go`
+- [X] T006 [P] Define Bicep IR Go types (BicepFile, BicepParameter, BicepResource, BicepContainer, BicepPort, BicepEnvVar, BicepConnection, BicepGateway, BicepGatewayRoute, BicepComment) in `pkg/cli/cmd/aspire/convert/emitter.go`
+- [X] T007 [P] Implement Bicep text emitter (`Emit` function) using Go `text/template` with templates for extension declarations, parameters, application resource, containers, data stores, gateways, and unsupported-resource comments in `pkg/cli/cmd/aspire/convert/emitter.go`
+- [X] T008 [P] Copy sample `aspire-manifest.json` from the repository root to `pkg/cli/cmd/aspire/convert/testdata/aspire-manifest.json`
+- [X] T009 Create convert command skeleton with `NewCommand` (Cobra + flags), `Runner` struct, `Validate` (check manifest arg exists), and `Run` (orchestrate Parse → Map → Emit → Write) in `pkg/cli/cmd/aspire/convert/convert.go`
 
 **Checkpoint**: Foundation ready — all types defined, parser and emitter implemented, command skeleton in place. User story implementation can now begin.
 
@@ -58,21 +58,21 @@ All source paths are relative to the `radius` repository root (`/home/nell/proje
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement extensible resource type mapping table (Aspire type string → Radius resource type + category) in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T011 [US1] Implement container mapping for `container.v0` and `container.v1` → `BicepContainer` with image, command/args, and `ApplicationRef`/`EnvironmentRef` wiring in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T012 [US1] Implement Aspire binding → `BicepPort` mapping with scheme/protocol/targetPort translation in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T013 [US1] Implement regex-based expression reference parser that extracts `{resource.property.path}` patterns and resolves them to Bicep resource references or parameter references in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T014 [US1] Implement connection generation: detect `connectionString` and binding references across resources and produce `BicepConnection` entries on consuming containers in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T015 [US1] Implement backing-service mapping (redis.server.v0, postgres.server.v0, mysql.server.v0 → Radius data-store `BicepResource`) with mapping table entries per FR-016 in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T016 [US1] Implement gateway/route generation for containers with `external: true` bindings → `BicepGateway` with routes per FR-017 in `pkg/cli/cmd/aspire/convert/mapper.go`
-- [ ] T017 [US1] Implement top-level `MapManifest` function orchestrating: extension collection, application resource, environment parameter, iterate resources by type → delegate to container/backing-service/gateway sub-mappers in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T010 [US1] Implement extensible resource type mapping table (Aspire type string → Radius resource type + category) in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T011 [US1] Implement container mapping for `container.v0` and `container.v1` → `BicepContainer` with image, command/args, and `ApplicationRef`/`EnvironmentRef` wiring in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T012 [US1] Implement Aspire binding → `BicepPort` mapping with scheme/protocol/targetPort translation in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T013 [US1] Implement regex-based expression reference parser that extracts `{resource.property.path}` patterns and resolves them to Bicep resource references or parameter references in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T014 [US1] Implement connection generation: detect `connectionString` and binding references across resources and produce `BicepConnection` entries on consuming containers in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T015 [US1] Implement backing-service mapping (redis.server.v0, postgres.server.v0, mysql.server.v0 → Radius data-store `BicepResource`) with mapping table entries per FR-016 in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T016 [US1] Implement gateway/route generation for containers with `external: true` bindings → `BicepGateway` with routes per FR-017 in `pkg/cli/cmd/aspire/convert/mapper.go`
+- [X] T017 [US1] Implement top-level `MapManifest` function orchestrating: extension collection, application resource, environment parameter, iterate resources by type → delegate to container/backing-service/gateway sub-mappers in `pkg/cli/cmd/aspire/convert/mapper.go`
 
 ### Tests for User Story 1
 
-- [ ] T018 [P] [US1] Create `expected-basic.bicep` golden file for basic container conversion test in `pkg/cli/cmd/aspire/convert/testdata/expected-basic.bicep`
-- [ ] T019 [P] [US1] Write parser unit tests with table-driven cases covering: valid container, valid backing service, missing fields, unknown type, malformed JSON, empty resources in `pkg/cli/cmd/aspire/convert/manifest_test.go`
-- [ ] T020 [P] [US1] Write mapper unit tests with table-driven cases for: container mapping, binding→port, expression resolution, connection generation, backing-service mapping, gateway generation, extension collection in `pkg/cli/cmd/aspire/convert/mapper_test.go`
-- [ ] T021 [P] [US1] Write emitter golden file test comparing full Emit output against `expected-basic.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
+- [X] T018 [P] [US1] Create `expected-basic.bicep` golden file for basic container conversion test in `pkg/cli/cmd/aspire/convert/testdata/expected-basic.bicep`
+- [X] T019 [P] [US1] Write parser unit tests with table-driven cases covering: valid container, valid backing service, missing fields, unknown type, malformed JSON, empty resources in `pkg/cli/cmd/aspire/convert/manifest_test.go`
+- [X] T020 [P] [US1] Write mapper unit tests with table-driven cases for: container mapping, binding→port, expression resolution, connection generation, backing-service mapping, gateway generation, extension collection in `pkg/cli/cmd/aspire/convert/mapper_test.go`
+- [X] T021 [P] [US1] Write emitter golden file test comparing full Emit output against `expected-basic.bicep` in `pkg/cli/cmd/aspire/convert/emitter_test.go`
 
 **Checkpoint**: User Story 1 is fully functional. `rad aspire convert` produces a valid Bicep file for manifests with containers, backing services, connections, and gateways. All tests pass.
 
