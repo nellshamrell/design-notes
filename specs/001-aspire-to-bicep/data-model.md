@@ -31,9 +31,10 @@ A single resource entry within the Aspire manifest.
 | Bindings | map[string]AspireBinding | Named network bindings (ports/endpoints). |
 | ConnectionString | string | Connection string template. May contain expression references. |
 | Build | *AspireBuild | Build configuration (for `container.v1` with Dockerfile). Nil if not present. |
-| Value | string | Parameter value (for `parameter.v0`). May contain expression references. |
+| Value | string | Parameter value (for `parameter.v0`) or source value (for `annotated.string`). May contain expression references. |
 | Inputs | map[string]AspireInput | Parameter inputs (for `parameter.v0`). |
 | Error | string | Error message from the Aspire manifest publisher (present when the resource could not be generated). When non-empty, the resource has no `type` and should be skipped during conversion. |
+| Filter | string | Filter type for `annotated.string` resources (e.g., `"uri"`). When present with `filter: "uri"`, the resource's value should be wrapped in a `uriComponent()` Bicep function call. |
 
 ## Entity: AspireBinding
 
@@ -60,12 +61,12 @@ Build configuration for `container.v1` resources.
 
 ## Entity: AspireInput
 
-A parameter input definition. Present in the parse model for manifest completeness, but `parameter.v0` resource mapping is out of scope for v1 (these resources are treated as unsupported).
+A parameter input definition. Used by `parameter.v0` resources. Secret parameters (`secret: true`) are mapped to `@secure()` Bicep parameters per FR-020. Non-secret parameters are treated as unsupported.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | Type | string | Input type (e.g., `string`). |
-| Secret | bool | Whether this input is a secret value. |
+| Secret | bool | Whether this input is a secret value. When `true`, the parameter is mapped to an `@secure()` Bicep parameter. |
 | Default | *AspireInputDefault | Default value configuration. Nil if no default. |
 
 ## Entity: AspireInputDefault
@@ -97,8 +98,9 @@ The complete Bicep file to be emitted.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| Extensions | []string | Required Bicep extension names (e.g., `radius`, `containers`). |
-| Parameters | []BicepParameter | Declared Bicep parameters (environment, secure params). |
+| Extensions | []string | Required Bicep extension names. In practice, only `radius` is needed — all Radius resource types are available through this single extension. |
+| Parameters | []BicepParameter | Declared Bicep parameters (environment, application name, secure params from `parameter.v0` with `secret: true`). |
+| Variables | []BicepVariable | Declared Bicep variables (e.g., `uriComponent()` wrappers from `annotated.string` with `filter: "uri"`). |
 | Application | BicepResource | The Radius application resource. |
 | Containers | []BicepContainer | Container resources. |
 | DataStores | []BicepResource | Data-store resources (Redis, PostgreSQL, MySQL). |
@@ -112,10 +114,11 @@ A Bicep parameter declaration.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| Name | string | Parameter name (e.g., `environment`, `cachePassword`). |
+| Name | string | Parameter name (e.g., `environment`, `cache_password`). Aspire resource names with hyphens are converted to underscores for valid Bicep identifiers. |
 | Type | string | Bicep type (e.g., `string`). |
-| Secure | bool | Whether to emit `@secure()` decorator. Reserved for future use (parameter.v0 mapping is out of scope for v1). |
+| Secure | bool | Whether to emit `@secure()` decorator. Set to `true` for `parameter.v0` resources with `secret: true` inputs (per FR-020). |
 | Description | string | Parameter description for `@description()` decorator. |
+| DefaultValue | string | Optional default value for the parameter (e.g., `'aspire-app'` for applicationName). |
 
 ## Entity: BicepResource
 
@@ -163,7 +166,8 @@ An environment variable in a container.
 | Field | Type | Description |
 |-------|------|-------------|
 | Value | string | Static value (if no reference). |
-| BicepExpression | string | A Bicep expression (if resolved from an Aspire reference). Only one of Value or BicepExpression is set. |
+| BicepExpression | string | A Bicep expression (if resolved from an Aspire reference). Only one of Value, BicepExpression, or StringInterpolation is set. |
+| StringInterpolation | string | A Bicep string interpolation expression (e.g., `'redis://:${cache_password_uri_encoded}@cache:6379'`). Used when the resolved value contains embedded Bicep variable/parameter references mixed with literals. Only one of Value, BicepExpression, or StringInterpolation is set. |
 
 ## Entity: BicepConnection
 
@@ -206,6 +210,16 @@ A comment block in the generated Bicep for skipped/unsupported resources.
 | ResourceType | string | The Aspire resource type that was unsupported. |
 | Message | string | Human-readable explanation. |
 
+## Entity: BicepVariable
+
+A Bicep variable declaration generated from `annotated.string` resources or other computed values.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| Name | string | Variable name (e.g., `cache_password_uri_encoded`). Aspire resource names with hyphens are converted to underscores. |
+| Expression | string | The Bicep expression assigned to the variable (e.g., `uriComponent(cache_password)`). |
+| Description | string | Optional description for `@description()` decorator. |
+
 ---
 
 ## Relationships
@@ -219,6 +233,7 @@ AspireInput 0..1── AspireInputDefault
 AspireInputDefault 0..1── AspireGenerate
 
 BicepFile 1──* BicepParameter
+BicepFile 1──* BicepVariable
 BicepFile 1──1 BicepResource (Application)
 BicepFile 1──* BicepContainer
 BicepFile 1──* BicepResource (DataStores)
@@ -249,11 +264,14 @@ No state machines, no lifecycle management, no persistence.
 | Entity | Rule |
 |--------|------|
 | AspireManifest | Must have non-nil `Resources` map |
-| AspireResource | `Type` field must be non-empty |
+| AspireResource | `Type` field must be non-empty (unless `Error` is non-empty) |
 | AspireResource (container) | `Image` must be non-empty for `container.v0`; may be empty for `container.v1` with `Build` |
 | AspireResource (container) | If `Build.BuildOnly` is `true`, the resource MUST be skipped during mapping (not converted to a Radius resource) |
+| AspireResource (parameter) | If `Inputs` contains an entry with `Secret: true`, the resource MUST produce a `@secure()` BicepParameter |
+| AspireResource (annotated.string) | If `Filter` is `"uri"`, the resource MUST produce a BicepVariable using `uriComponent()` |
 | AspireBinding | `TargetPort` must be > 0 |
 | BicepParameter | `Name` must be a valid Bicep identifier (alphanumeric + underscore, starts with letter) |
+| BicepVariable | `Name` must be a valid Bicep identifier (alphanumeric + underscore, starts with letter) |
 | BicepContainer | `SymbolicName` must be unique across all resources in the BicepFile |
 | BicepFile | Must have exactly one Application resource |
 | BicepFile | `Extensions` must include at least `radius` |

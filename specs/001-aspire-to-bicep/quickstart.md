@@ -47,7 +47,9 @@ rad aspire convert aspire-manifest.json --application my-aspire-app
 Open `app.bicep` and review:
 
 - **Container resources**: Verify images, ports, and environment variables are correct.
-- **Warnings**: Check for `// Unsupported:` comments marking resources that need manual attention (including `parameter.v0` resources that require manual Bicep parameter declarations).
+- **Secure parameters**: Secret parameters (e.g., `cache_password`) are generated as `@secure()` Bicep parameters. You will supply these at deploy time.
+- **Variables**: URI-encoded values (e.g., `cache_password_uri_encoded`) are generated as Bicep variables using `uriComponent()`.
+- **Warnings**: Check for `// Unsupported:` comments marking resources that need manual attention.
 - **Build warnings**: If you see comments about build configurations, ensure those images are pre-built and pushed.
 
 ## Step 4: Deploy with Radius
@@ -56,10 +58,10 @@ Open `app.bicep` and review:
 rad deploy app.bicep
 ```
 
-If you need to supply parameters (e.g., for secrets that were not automatically converted), pass them explicitly:
+If the generated file includes `@secure()` parameters (e.g., for secrets like `cache_password`), supply them at deploy time:
 
 ```bash
-rad deploy app.bicep --parameters cachePassword=mysecretpassword
+rad deploy app.bicep --parameters cache_password=mysecretpassword
 ```
 
 ## Example: Converting the sample manifest
@@ -74,19 +76,20 @@ rad aspire convert aspire-manifest.json
 #   Converted resources:
 #     ✓ cache (container.v0) → Radius.Compute/containers
 #     ✓ app (container.v1) → Radius.Compute/containers
+#     ✓ cache-password (parameter.v0, secret) → @secure() param cache_password
+#     ✓ cache-password-uri-encoded (annotated.string, uri) → var cache_password_uri_encoded
 #   Warnings:
 #     ⚠ app: has build configuration
 #     ⚠ frontend: skipped — build-only artifact (build.buildOnly: true)
-#     ⚠ cache-password: unsupported (parameter.v0)
-#     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
-#   Generated: app.bicep (2 containers, 1 gateway, 3 skipped)
+#     ⚠ cache-password-uri-encoded: unsupported (annotated.string) — best-effort uriComponent() mapping
+#   Generated: app.bicep (2 containers, 1 gateway, 1 param, 1 var, 1 skipped)
 
 # Build and push your container images (if not already done)
 docker build -t myregistry/app:latest ./app
 docker push myregistry/app:latest
 
-# Update app.bicep with your actual image references and add any needed parameters, then deploy
-rad deploy app.bicep
+# Update app.bicep with your actual image references, then deploy
+rad deploy app.bicep --parameters cache_password=mysecretpassword
 ```
 
 ## Example: Converting a manifest with errored resources
@@ -101,13 +104,14 @@ rad aspire convert aspire-manifest-invalid-manifest-field.json
 #   Converted resources:
 #     ✓ cache (container.v0) → Radius.Compute/containers
 #     ✓ app (container.v1) → Radius.Compute/containers
+#     ✓ cache-password (parameter.v0, secret) → @secure() param cache_password
+#     ✓ cache-password-uri-encoded (annotated.string, uri) → var cache_password_uri_encoded
 #   Warnings:
 #     ⚠ docker-hub: manifest error — This resource does not support generation in the manifest.
 #     ⚠ app: has build configuration
 #     ⚠ frontend: skipped — build-only artifact (build.buildOnly: true)
-#     ⚠ cache-password: unsupported (parameter.v0)
-#     ⚠ cache-password-uri-encoded: unsupported (annotated.string)
-#   Generated: app.bicep (2 containers, 1 gateway, 4 skipped)
+#     ⚠ cache-password-uri-encoded: unsupported (annotated.string) — best-effort uriComponent() mapping
+#   Generated: app.bicep (2 containers, 1 gateway, 1 param, 1 var, 2 skipped)
 
 rad deploy app.bicep
 ```

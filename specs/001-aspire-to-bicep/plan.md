@@ -5,7 +5,7 @@
 
 ## Summary
 
-New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Resources that the Aspire manifest publisher could not generate (entries with an `error` field instead of a `type` field) are gracefully skipped with warnings. Build-only container resources (`build.buildOnly: true`) are excluded from conversion entirely as they are build-time artifacts, not runtime containers. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
+New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and produces a Radius-compatible `app.bicep` file. The command maps Aspire container resources, backing services (Redis, PostgreSQL, MySQL), and external bindings to their Radius Bicep equivalents. Secret parameters (`parameter.v0` with `secret: true`) are mapped to `@secure()` Bicep parameter declarations. `annotated.string` resources with `filter: "uri"` generate best-effort `var` declarations using `uriComponent()`. Aspire expression references (e.g., `{cache.bindings.tcp.host}`, `{param.value}`, `{resource.connectionString}`) are fully resolved to Bicep literals, parameter references, variable references, or string interpolation expressions. Resources that the Aspire manifest publisher could not generate (entries with an `error` field instead of a `type` field) are gracefully skipped with warnings. Build-only container resources (`build.buildOnly: true`) are excluded from conversion entirely as they are build-time artifacts, not runtime containers. Only `extension radius` is required — all Radius resource types are available through this single extension. Implemented in Go following the existing Radius CLI `framework.Runner` pattern with Cobra commands, fitting into the `radius` repository's `pkg/cli/cmd/` structure.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ New `rad aspire convert` CLI command that reads an Aspire manifest JSON file and
 **Target Platform**: Cross-platform CLI (Linux, macOS, Windows) — same as existing `rad` CLI
 **Project Type**: Single project — new package within existing `radius` monorepo
 **Performance Goals**: Sub-second conversion for manifests with up to 50 resources
-**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain; must handle errored manifest entries (resources with `error` field, no `type`) gracefully; must exclude build-only containers (`build.buildOnly: true`) from conversion
+**Constraints**: No network access required; pure file transformation; output must compile with Radius Bicep toolchain; must handle errored manifest entries (resources with `error` field, no `type`) gracefully; must exclude build-only containers (`build.buildOnly: true`) from conversion; must map secret parameters (`parameter.v0` with `secret: true`) to `@secure()` Bicep parameters; must resolve Aspire expression references to Bicep literals, parameter references, variable references, or string interpolation; only `extension radius` is needed (single extension)
 **Scale/Scope**: Conversion of manifests with 1-50 Aspire resources; ~5-7 new Go source files, ~3-4 test files
 
 ## Constitution Check

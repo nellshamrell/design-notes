@@ -26,13 +26,13 @@
 **Findings**:
 | Aspire Type | Radius Resource Type | Bicep Extension |
 |---|---|---|
-| `container.v0` / `container.v1` | `Radius.Compute/containers@2025-08-01-preview` | `containers` |
+| `container.v0` / `container.v1` | `Radius.Compute/containers@2025-08-01-preview` | `radius` |
 | `redis.server.v0` | `Applications.Datastores/redisCaches@2023-10-01-preview` | `radius` |
-| `postgres.server.v0` | `Radius.Data/postgreSqlDatabases@2025-08-01-preview` | `radiusResources` |
-| `mysql.server.v0` | `Radius.Data/mySqlDatabases@2025-08-01-preview` | `radiusResources` |
+| `postgres.server.v0` | `Radius.Data/postgreSqlDatabases@2025-08-01-preview` | `radius` |
+| `mysql.server.v0` | `Radius.Data/mySqlDatabases@2025-08-01-preview` | `radius` |
 | Application | `Radius.Core/applications@2025-08-01-preview` | `radius` |
 | Environment (param) | `Radius.Core/environments@2025-08-01-preview` | `radius` |
-| External binding (gateway) | `Radius.Compute/routes@2025-08-01-preview` | `containers` |
+| External binding (gateway) | `Radius.Compute/routes@2025-08-01-preview` | `radius` |
 
 **Note**: `Radius.Data/redisCaches` does not yet have a YAML manifest in `resource-types-contrib`. For Redis, the fallback is `Applications.Datastores/redisCaches@2023-10-01-preview`. The mapping table should be configurable to accommodate this transition.
 
@@ -46,37 +46,37 @@
 
 **Task**: Which `extension` declarations to include in generated Bicep files.
 
-**Decision**: Generate the minimum set of extensions needed for the resource types present in the conversion output. The required extensions are:
-- `extension radius` — always included (provides `Radius.Core/applications`, `Radius.Core/environments`)
-- `extension containers` — included when container resources are present
-- `extension radiusResources` — included when data-store resources (Redis, PostgreSQL, MySQL) are present
+**Decision**: Generate only `extension radius` at the top of every output file. All Radius resource types (`Radius.Core/applications`, `Radius.Compute/containers`, `Radius.Compute/routes`, `Radius.Data/*`) are available through this single extension.
 
-**Rationale**: Matches the patterns observed in `resource-types-contrib/Compute/containers/test/app.bicep` and `docs/content/tutorials/deploy-application/snippets/app.bicep`. Only declaring needed extensions keeps the output clean.
+**Rationale**: Testing with the actual Radius Bicep toolchain confirmed that `extension radius` alone is sufficient for all resource types used in the conversion output. The earlier assumption that `extension containers` and `extension radiusResources` were needed was incorrect — the `radius` extension provides the full Radius type catalog.
 
 **Alternatives considered**:
-- Always include all extensions — rejected as it would add unused imports.
+- Multiple extensions per resource type — rejected after testing showed `extension radius` covers all types. Multiple extensions caused compilation warnings.
 - No extensions (rely on Bicep auto-discovery) — rejected; explicit extension declarations are required by the Radius Bicep toolchain.
 
 ### 4. Aspire Expression Reference Resolution
 
 **Task**: How to convert Aspire's `{resource.bindings.port.host}` interpolation references to Bicep.
 
-**Decision**: Implement a regex-based expression parser that extracts reference patterns of the form `{resource.property.path}` and resolves them to:
-- **Bicep resource references**: `{cache.bindings.tcp.host}` → Bicep property reference on the corresponding resource
-- **Connection string references**: `{cache.connectionString}` → triggers a `connections` entry on the consuming container
-
-**Note**: Parameter references (e.g., `{cache-password.value}` → Bicep parameter reference) were identified in the manifest but `parameter.v0` mapping is out of scope for v1. These expression patterns are documented here for future reference.
+**Decision**: Implement a regex-based expression parser that extracts reference patterns of the form `{resource.property.path}` and resolves them to concrete Bicep constructs based on the referenced resource type:
+- **Binding host references**: `{cache.bindings.tcp.host}` → string literal of the resource name (e.g., `'cache'`)
+- **Binding port references**: `{cache.bindings.tcp.port}` and `{resource.bindings.name.targetPort}` → string literal of the port number (e.g., `'6379'`); self-references (same resource) resolve to the literal value from that resource's bindings
+- **Parameter value references**: `{cache-password.value}` → Bicep parameter reference (e.g., `cache_password`) when the referenced resource is a `parameter.v0` with `secret: true` input
+- **Annotated string references**: `{cache-password-uri-encoded.value}` → Bicep variable reference (e.g., `cache_password_uri_encoded`) when the referenced resource is an `annotated.string`
+- **Connection string references**: `{cache.connectionString}` → fully expanded by recursively resolving the resource's connection string template, triggers a `connections` entry on the consuming container
+- **Composite expressions**: values containing multiple embedded references produce Bicep string interpolation (e.g., `'redis://:${cache_password_uri_encoded}@cache:6379'`)
 
 **Expression patterns observed in sample manifest**:
 | Pattern | Example | Maps to |
 |---|---|---|
-| `{resource.bindings.name.host}` | `{cache.bindings.tcp.host}` | Service discovery / connection |
-| `{resource.bindings.name.port}` | `{cache.bindings.tcp.port}` | Connection port reference |
+| `{resource.bindings.name.host}` | `{cache.bindings.tcp.host}` | String literal: `'cache'` |
+| `{resource.bindings.name.port}` | `{cache.bindings.tcp.port}` | String literal: `'6379'` |
 | `{resource.bindings.name.url}` | `{app.bindings.http.url}` | Full URL reference |
-| `{resource.bindings.name.targetPort}` | `{app.bindings.http.targetPort}` | Container port ref on self |
-| `{resource.value}` | `{cache-password.value}` | Parameter value (out of scope for v1) |
-| `{resource.connectionString}` | `{cache.connectionString}` | Full connection string |
-| `{resource.inputs.name}` | `{cache-password.inputs.value}` | Input parameter (out of scope for v1) |
+| `{resource.bindings.name.targetPort}` | `{app.bindings.http.targetPort}` | String literal of port (self-ref: `'8000'`) |
+| `{resource.value}` | `{cache-password.value}` | Bicep parameter reference: `cache_password` |
+| `{resource.value}` (annotated.string) | `{cache-password-uri-encoded.value}` | Bicep variable reference: `cache_password_uri_encoded` |
+| `{resource.connectionString}` | `{cache.connectionString}` | Fully expanded connection string |
+| `{resource.inputs.name}` | `{cache-password.inputs.value}` | Input parameter (handled via parameter mapping) |
 
 **Rationale**: Regex parsing is simple and sufficient for the well-defined Aspire expression format. The expressions are not arbitrary — they follow a predictable `{name.path}` pattern.
 
@@ -142,7 +142,7 @@ This occurs for resources like custom Docker registries, unsupported integration
 
 1. **Parser tests** (`manifest_test.go`): Table-driven tests validating JSON parsing of each Aspire resource type. Tests cover valid inputs, missing fields, malformed JSON, unknown types, and errored resource entries (resources with `error` field, no `type`).
 
-2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution, parameter generation, backing-service mapping, gateway generation for external bindings, skipping errored resources with appropriate warnings, and skipping `buildOnly` resources with appropriate warnings.
+2. **Mapper tests** (`mapper_test.go`): Table-driven tests validating each Aspire→Radius mapping independently. Tests cover container mapping, binding→port conversion, expression resolution (including resolution to literals, parameter refs, variable refs, and string interpolation), parameter generation for secret params, variable generation for URI-encoded annotated strings, connection generation, backing-service mapping, gateway generation for external bindings, skipping errored resources with appropriate warnings, and skipping `buildOnly` resources with appropriate warnings.
 
 3. **Emitter/golden file tests** (`emitter_test.go`): End-to-end tests that parse a full sample manifest, map it, emit Bicep, and compare against golden `.bicep` files in `testdata/`. Uses `testutil.CompareWithGoldenFile` pattern if available, or plain `os.ReadFile + assertEqual`. Includes a golden file test for the `aspire-manifest-invalid-manifest-field.json` manifest to verify errored resources and `buildOnly` resources are handled gracefully.
 
@@ -175,8 +175,10 @@ In the sample manifest, `frontend` is a build-only container whose output files 
 **Decision**: Resources with `build.buildOnly: true` MUST be excluded from conversion entirely. The exclusion check occurs **after** error-field detection (FR-018) but **before** normal container mapping (FR-014). The flow is:
 1. Check for `error` field → skip per FR-018
 2. Check for `build.buildOnly: true` → skip per FR-019
-3. Check type in mapping table → unsupported warning per FR-013 if not found
-4. Map normally if type is supported
+3. Check for `parameter.v0` with `secret: true` → map to `@secure()` param per FR-020
+4. Check for `annotated.string` with `filter: "uri"` → map to `uriComponent()` variable per FR-021
+5. Check type in mapping table → unsupported warning per FR-013 if not found
+6. Map normally if type is supported
 
 When a `buildOnly` resource is detected:
 1. Skip the resource (do not generate any Radius resource)
@@ -189,3 +191,89 @@ When a `buildOnly` resource is detected:
 **Alternatives considered**:
 - Convert with a warning (match current FR-014 behavior for build containers) — rejected because `buildOnly` containers are fundamentally different from regular build containers. A regular build container still runs as a service; a `buildOnly` container does not.
 - Silently ignore — rejected because users should know which resources were excluded. Consistent with the error-field handling decision (Research #7).
+
+### 10. Secret Parameter Handling (`parameter.v0` with `secret: true`)
+
+**Task**: How to handle Aspire `parameter.v0` resources whose inputs include `secret: true`.
+
+**Findings**: The Aspire manifest uses `parameter.v0` resources to represent configurable values. When an input has `secret: true`, it represents a sensitive value (e.g., a database password) that should not be hardcoded. Example from the sample manifests:
+
+```json
+"cache-password": {
+  "type": "parameter.v0",
+  "value": "{cache-password.inputs.value}",
+  "inputs": {
+    "value": {
+      "type": "string",
+      "secret": true,
+      "default": {
+        "generate": { "minLength": 22, "special": false }
+      }
+    }
+  }
+}
+```
+
+Other resources reference the parameter value via `{cache-password.value}` in their environment variables. The generated Bicep must provide a way for users to supply this secret at deploy time.
+
+**Decision**: Map `parameter.v0` resources with `secret: true` inputs to Bicep `@secure()` parameter declarations. The parameter name is derived from the Aspire resource name with hyphens converted to underscores (e.g., `cache-password` → `cache_password`). Expression references to `{cache-password.value}` resolve to the Bicep parameter name `cache_password`. Non-secret `parameter.v0` resources remain unsupported and emit warnings per FR-013.
+
+The generated Bicep output includes:
+```bicep
+@secure()
+@description('Redis password for the cache container.')
+param cache_password string
+```
+
+And environment variable references resolve to bare parameter references:
+```bicep
+env: {
+  CACHE_PASSWORD: cache_password
+  REDIS_PASSWORD: cache_password
+}
+```
+
+**Rationale**: Secret parameters are critical for deployable Bicep output. Without them, the generated file cannot be deployed because containers that depend on secrets would have unresolved references. Mapping secret parameters to `@secure()` Bicep params follows Bicep best practices and allows users to supply values via `rad deploy --parameters cache_password=mysecret` or parameter files. The `@secure()` decorator ensures the value is not logged or stored in deployment history.
+
+**Alternatives considered**:
+- Leave all parameters as unsupported — rejected because this forces users to manually add `@secure()` params and fix all expression references, defeating the purpose of automated conversion. The working app.bicep confirmed this is needed for a deployable output.
+- Map all `parameter.v0` resources (including non-secret) — rejected because non-secret parameters often represent computed or internal values that don't map cleanly to Bicep parameters. Limiting to `secret: true` is the highest-value mapping.
+- Generate default values from the `generate` configuration — rejected because secrets should be user-supplied at deploy time, not hardcoded with generated defaults.
+
+### 11. Annotated String Handling (`annotated.string` with `filter: "uri"`)
+
+**Task**: How to handle Aspire `annotated.string` resources with filter transformations.
+
+**Findings**: The Aspire manifest uses `annotated.string` resources to represent derived/transformed values. The `value` field contains an expression reference, and the `filter` field specifies the transformation. Example:
+
+```json
+"cache-password-uri-encoded": {
+  "type": "annotated.string",
+  "value": "{cache-password.value}",
+  "filter": "uri"
+}
+```
+
+This resource represents the URI-encoded version of the `cache-password` parameter, used in constructing `redis://` URIs where the password must be percent-encoded.
+
+**Decision**: Map `annotated.string` resources with `filter: "uri"` to Bicep variable declarations using the `uriComponent()` function. The variable name is derived from the Aspire resource name with hyphens converted to underscores. The source value reference is resolved to the corresponding Bicep parameter or variable name.
+
+The generated Bicep output includes:
+```bicep
+@description('URI-encoded Redis password (for constructing redis:// URIs).')
+var cache_password_uri_encoded = uriComponent(cache_password)
+```
+
+Environment variable references containing `{cache-password-uri-encoded.value}` within composite expressions resolve to Bicep string interpolation:
+```bicep
+CACHE_URI: 'redis://:${cache_password_uri_encoded}@cache:6379'
+```
+
+An unsupported comment is still included in the Bicep output (`// Unsupported: cache-password-uri-encoded (annotated.string) — manual configuration required`) because only the `uri` filter is handled and other `annotated.string` resources with different filters would still need manual attention.
+
+**Rationale**: The `uri` filter is the most common `annotated.string` use case in Aspire manifests — URI-encoding passwords for connection string construction. Bicep's built-in `uriComponent()` function provides an exact equivalent. Without this mapping, environment variables referencing the URI-encoded value would contain unresolved expressions, causing deployment failures.
+
+**Alternatives considered**:
+- Treat all `annotated.string` as unsupported — rejected because the working app.bicep proved that resolving the `uri` filter to `uriComponent()` is essential for deployable output.
+- Support all filter types — rejected per Principle VII (Simplicity Over Cleverness); only `uri` has been observed in real manifests. Other filters can be added as they are encountered.
+- Inline the `uriComponent()` call at each usage site — rejected because a named variable is cleaner, avoids repetition, and matches the Aspire manifest's modeling of the value as a named resource.
