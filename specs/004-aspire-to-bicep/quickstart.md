@@ -61,7 +61,7 @@ git checkout 004-aspire-to-bicep
 make build
 ```
 
-The built binary is at `./dist/rad` (or `./dist/rad.exe` on Windows).
+The built binary is at `./dist/radd` (or `./dist/rad.exe` on Windows).
 
 ## Step 4: Convert Aspire Artifacts to Radius Bicep
 
@@ -76,15 +76,17 @@ rad bicep generate --from-aspire ./infra
 ```
 Converting Aspire artifacts from: ./infra
   Found 2 services: apiservice, webfrontend
-  Found 1 dependency: cache (Redis)
+  Found 2 dependencies: cache (Redis), sqlserver (SQL Server)
 
 Generating app.bicep...
   ✓ Application: aspire-demo
   ✓ Container: apiservice (image param: apiserviceImage)
   ✓ Container: webfrontend (image param: webfrontendImage)
   ✓ Dependency: cache (Applications.Datastores/redisCaches, Recipe-backed)
+  ✓ Dependency: sqlserver (Applications.Datastores/sqlDatabases, Recipe-backed)
   ✓ Connection: webfrontend → apiservice
-  ✓ Connection: apiservice → cache
+  ✓ Connection: webfrontend → cache
+  ✓ Connection: apiservice → sqlserver
 
 Output written to: ./app.bicep
 Mapping report written to: ./mapping-report.md
@@ -142,8 +144,8 @@ resource apiservice 'Radius.Compute/containers@2025-08-01-preview' = {
       }
     }
     connections: {
-      cache: {
-        source: cache.id
+      sqlserver: {
+        source: sqlserver.id
       }
     }
   }
@@ -178,12 +180,21 @@ resource cache 'Applications.Datastores/redisCaches@2023-10-01-preview' = {
     environment: environment
   }
 }
+
+resource sqlserver 'Applications.Datastores/sqlDatabases@2023-10-01-preview' = {
+  name: 'sqlserver'
+  properties: {
+    application: app.id
+    environment: environment
+  }
+}
 ```
 
 Key points:
 - Image references are Bicep parameters — override at deploy time
 - Redis uses a Recipe-backed Portable Resource (no manual infra provisioning)
-- Connections express the `webfrontend → apiservice → cache` topology
+- SQL Server uses a Recipe-backed Portable Resource (`sqlDatabases`)
+- Connections express the `webfrontend → apiservice → sqlserver` and `webfrontend → cache` topology
 
 ## Step 6: Review the Mapping Report
 
@@ -240,29 +251,10 @@ rad resource show containers webfrontend --application aspire-demo
 
 The application graph should show:
 - `aspire-demo` (Application)
-  - `webfrontend` (Container) → connects to `apiservice`
-  - `apiservice` (Container) → connects to `cache`
+  - `webfrontend` (Container) → connects to `apiservice`, `cache`
+  - `apiservice` (Container) → connects to `sqlserver`
   - `cache` (Redis, Recipe-backed)
-
-## Step 9: Verify Idempotency (FR-012)
-
-Re-run the conversion and confirm byte-for-byte identical output:
-
-```bash
-# Re-run with deterministic flag (fixed timestamps)
-rad bicep generate --from-aspire ./infra --deterministic
-cp app.bicep app-run1.bicep
-cp mapping-report.md mapping-report-run1.md
-
-# Run again
-rad bicep generate --from-aspire ./infra --deterministic
-
-# Compare — should produce no differences
-diff app-run1.bicep app.bicep
-diff mapping-report-run1.md mapping-report.md
-```
-
-Both `diff` commands should produce no output, confirming the conversion is deterministic.
+  - `sqlserver` (SQL Database, Recipe-backed)
 
 ## Common Options
 

@@ -7,19 +7,19 @@
 
 ## Summary
 
-Build a `rad bicep generate --from-aspire` CLI subcommand that reads `azd infra synth` Bicep output from a simple Aspire application (frontend + API + Redis) and produces a Radius-deployable `app.bicep` file plus a companion `mapping-report.md`. The command is implemented in Go within the existing Radius CLI codebase using the Cobra/`framework.Factory` pattern. It uses a lightweight Bicep text parser (no AST library), a two-phase discovery+extraction mapper, Go `text/template` for Bicep output generation, and golden-file tests for idempotency verification.
+Build a `rad bicep generate --from-aspire` CLI subcommand that reads `azd infra synth` output from the reference Aspire application (`./example-aspire-app` with webfrontend + apiservice + Redis + SQL Server) and produces a Radius-deployable `app.bicep` file plus a companion `mapping-report.md`. The input consists of per-service YAML templates (`.tmpl.yaml`) in the AppHost's `infra/` directory and solution-level Bicep files in the top-level `infra/` directory. The command is implemented in Go within the existing Radius CLI codebase using the Cobra/`framework.Factory` pattern. It uses a YAML parser for `.tmpl.yaml` files (with Go template expression stripping), a lightweight Bicep text parser for `main.bicep`, a two-phase discovery+extraction mapper, Go `text/template` for Bicep output generation, and golden-file tests for idempotency verification.
 
 ## Technical Context
 
 **Language/Version**: Go 1.26.0 (`github.com/radius-project/radius`)
-**Primary Dependencies**: Cobra v1.10.2, `framework.Factory` (Radius CLI framework), Go `text/template`, `os`/`path/filepath` (file I/O), `regexp` (Bicep parsing)
+**Primary Dependencies**: Cobra v1.10.2, `framework.Factory` (Radius CLI framework), Go `text/template`, `gopkg.in/yaml.v3` (YAML parsing), `os`/`path/filepath` (file I/O), `regexp` (Go template expression stripping, Bicep parsing)
 **Storage**: N/A — file-based I/O only (reads azd Bicep directory, writes `app.bicep` + `mapping-report.md`)
-**Testing**: `go test` with table-driven unit tests, golden-file tests for idempotency, integration tests via `radcli` test helpers (`SharedCommandValidation`, `ValidateInput`)
+**Testing**: `go test` with table-driven unit tests, golden-file tests for idempotency, integration tests via `radcli` test helpers (`SharedCommandValidation`, `ValidateInput`); reference application fixtures from `./example-aspire-app`
 **Target Platform**: Cross-platform CLI (Linux, macOS, Windows) — same as existing `rad` binary
 **Project Type**: Single project — extends the existing `radius` monorepo CLI codebase
-**Performance Goals**: N/A — batch conversion of a small number of files (< 10 Bicep files for PoC scope)
+**Performance Goals**: N/A — batch conversion of a small number of files (< 10 YAML templates + Bicep files for PoC scope)
 **Constraints**: Must integrate with existing `rad` CLI command structure; must produce valid Bicep output; no external runtime dependencies beyond the `rad` binary itself (no Bicep CLI, no .NET required at conversion time)
-**Scale/Scope**: PoC scope — fixed topology (2 services + 1 Redis dependency); single Aspire project only
+**Scale/Scope**: PoC scope — reference application topology (2 services + 1 Redis + 1 SQL Server); single Aspire project only
 
 ## Constitution Check
 
@@ -69,7 +69,7 @@ pkg/cli/cmd/bicep/
 └── generate/                         # NEW: rad bicep generate --from-aspire
     ├── generate.go                   # Cobra command + Runner (NewCommand, Validate, Run)
     ├── generate_test.go              # Unit tests for command validation
-    ├── parser.go                     # Bicep file parser (text-based extraction)
+    ├── parser.go                     # YAML template + Bicep file parser
     ├── parser_test.go                # Parser unit tests with testdata fixtures
     ├── mapper.go                     # Aspire → Radius model mapper
     ├── mapper_test.go                # Mapper unit tests
@@ -82,23 +82,25 @@ pkg/cli/cmd/bicep/
     │   ├── app.bicep.tmpl            # Template for app.bicep output
     │   └── mapping-report.md.tmpl    # Template for mapping-report.md output
     └── testdata/                     # Test fixtures
-        ├── aspire-starter/           # Simulated azd infra synth output
-        │   ├── main.bicep
-        │   ├── apiservice/
-        │   │   └── apiservice.bicep
-        │   ├── webfrontend/
-        │   │   └── webfrontend.bicep
-        │   └── cache/
-        │       └── cache.bicep
+        ├── example-aspire-app/       # Reference application structure (from ./example-aspire-app)
+        │   ├── infra/
+        │   │   ├── main.bicep
+        │   │   └── main.parameters.json
+        │   └── AspireApp.AppHost/
+        │       └── infra/
+        │           ├── apiservice.tmpl.yaml
+        │           ├── webfrontend.tmpl.yaml
+        │           ├── cache.tmpl.yaml
+        │           └── sqlserver.tmpl.yaml
         ├── golden/                   # Expected output files for golden tests
         │   ├── app.bicep
         │   └── mapping-report.md
         ├── empty/                    # Empty directory for error tests
         ├── missing-ports/            # Service with missing port info
-        └── multi-project/            # Multiple main.bicep for error tests
+        └── multi-project/            # Multiple AppHost infra dirs for error tests
 ```
 
-**Structure Decision**: Extends the existing `radius` repository CLI structure. All new code lives under `pkg/cli/cmd/bicep/generate/` following the established one-package-per-command pattern (`publish/`, `publishextension/`, `generatekubernetesmanifest/`). Internal components (parser, mapper, generator, reporter) are package-private files within the same package to keep the PoC simple. Test fixtures use the Go convention of a `testdata/` directory.
+**Structure Decision**: Extends the existing `radius` repository CLI structure. All new code lives under `pkg/cli/cmd/bicep/generate/` following the established one-package-per-command pattern (`publish/`, `publishextension/`, `generatekubernetesmanifest/`). Internal components (parser, mapper, generator, reporter) are package-private files within the same package to keep the PoC simple. Test fixtures replicate the `./example-aspire-app` directory structure (YAML templates + solution-level Bicep) using a `testdata/` directory.
 
 ## Complexity Tracking
 

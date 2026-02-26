@@ -4,22 +4,89 @@
 
 ## Entity Overview
 
-The conversion pipeline has two model layers: the **Parsed Model** (representation of input Bicep files) and the **Radius Model** (representation of the target app.bicep output). The mapper transforms one into the other, and the reporter tracks the lineage between them.
+The conversion pipeline has two model layers: the **Parsed Model** (representation of input artifacts — YAML templates and Bicep files) and the **Radius Model** (representation of the target app.bicep output). The mapper transforms one into the other, and the reporter tracks the lineage between them.
 
 ## Parsed Model (Input)
 
-These entities represent the structure extracted from `azd infra synth` Bicep files.
+These entities represent the structure extracted from `azd infra synth` artifacts. Per R-001, the real output consists of per-service YAML templates (`.tmpl.yaml`) in the AppHost's `infra/` directory and solution-level Bicep files in the top-level `infra/` directory.
+
+### AspireAppDescriptor
+
+Top-level entity representing the fully parsed Aspire application.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `RootDir` | `string` | Absolute path to the Aspire application root directory |
+| `AppHostDir` | `string` | Absolute path to the AppHost project directory (contains `infra/`) |
+| `ServiceTemplates` | `[]ServiceTemplate` | Parsed per-service YAML templates |
+| `MainBicep` | `*BicepFile` | Parsed solution-level `main.bicep` (parameters, modules) |
+| `ParametersJSON` | `map[string]any` | Parsed `main.parameters.json` content |
+
+### ServiceTemplate
+
+Represents a parsed per-service `.tmpl.yaml` file.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Path` | `string` | Absolute file path of the source `.tmpl.yaml` file |
+| `ServiceName` | `string` | Service name from `tags.aspire-resource-name` or filename stem |
+| `AzdServiceName` | `string` | Service name from `tags.azd-service-name` |
+| `Ingress` | `*IngressConfig` | Parsed ingress configuration (port, external, transport) |
+| `Containers` | `[]ContainerDef` | Container definitions from `template.containers` |
+| `Secrets` | `[]SecretDef` | Secrets from `configuration.secrets` |
+| `Tags` | `map[string]string` | Resource tags |
+
+### IngressConfig
+
+Represents the ingress configuration extracted from a `.tmpl.yaml` file.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `External` | `bool` | Whether the service is externally accessible |
+| `TargetPort` | `int` | Target port number (extracted from `targetPort` or `{{ targetPortOrDefault N }}`) |
+| `Transport` | `string` | Transport protocol (`http`, `tcp`) |
+
+### ContainerDef
+
+Represents a container definition from `template.containers[]`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Image` | `string` | Image expression (typically `{{ .Image }}` → placeholder) |
+| `Name` | `string` | Container name |
+| `Env` | `[]EnvVar` | Environment variables |
+| `Command` | `[]string` | Container command override (if any) |
+| `Args` | `[]string` | Container arguments (if any) |
+
+### EnvVar
+
+Represents an environment variable from a container definition.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Name` | `string` | Environment variable name |
+| `Value` | `string` | Literal value (if set directly) |
+| `SecretRef` | `string` | Secret reference name (if set via `secretRef`) |
+
+### SecretDef
+
+Represents a secret from `configuration.secrets[]`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Name` | `string` | Secret name |
+| `Value` | `string` | Secret value expression (may contain Go template expressions) |
 
 ### BicepFile
 
-Represents a single parsed Bicep file.
+Represents the solution-level `main.bicep` file (used for application-level context only).
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `Path` | `string` | Absolute file path of the source Bicep file |
 | `Resources` | `[]BicepResource` | Resource declarations found in the file |
 | `Parameters` | `[]BicepParameter` | Parameter declarations found in the file |
-| `Modules` | `[]BicepModule` | Module declarations found in the file (main.bicep only) |
+| `Modules` | `[]BicepModule` | Module declarations found in the file |
 | `Variables` | `[]BicepVariable` | Variable declarations found in the file |
 
 ### BicepResource
@@ -78,26 +145,26 @@ Top-level entity representing the entire application conversion.
 
 | Field | Type | Description | Source |
 |-------|------|-------------|--------|
-| `Name` | `string` | Application name derived from Aspire project name | `main.bicep` → `environmentName` param or directory name |
-| `Containers` | `[]RadiusContainer` | Service containers in the application | Per-service Bicep modules |
-| `Dependencies` | `[]RadiusDependency` | Infrastructure dependencies (Redis, etc.) | Per-dependency Bicep modules |
+| `Name` | `string` | Application name derived from Aspire project name | Directory name or `main.bicep` → `environmentName` param |
+| `Containers` | `[]RadiusContainer` | Service containers in the application | Per-service `.tmpl.yaml` templates (services only) |
+| `Dependencies` | `[]RadiusDependency` | Infrastructure dependencies (Redis, SQL Server, etc.) | Per-dependency `.tmpl.yaml` templates |
 | `Parameters` | `[]RadiusParameter` | Bicep parameters for the output file | Derived from image refs, secrets |
 | `Variables` | `[]RadiusVariable` | Bicep variables for the output file | Derived from computed values |
 
 ### RadiusContainer
 
-Represents an `Radius.Compute/containers` resource.
+Represents a `Radius.Compute/containers` resource.
 
 | Field | Type | Description | Source |
 |-------|------|-------------|--------|
-| `Name` | `string` | Container resource name | Container App `name` |
+| `Name` | `string` | Container resource name | `.tmpl.yaml` → `tags.aspire-resource-name` or container `name` |
 | `ImageParam` | `string` | Bicep parameter name for the image | Derived: `{name}Image` |
-| `ImageDefault` | `string` | Default image value | Container App `template.containers[0].image` or `{name}:latest` |
-| `Ports` | `[]RadiusPort` | Port definitions | Container App `configuration.ingress` |
-| `EnvVars` | `map[string]string` | Environment variables | Container App `template.containers[0].env[]` |
-| `Connections` | `[]RadiusConnection` | Connections to other resources | Derived from `ConnectionStrings__*` env vars |
-| `IsExternal` | `bool` | Whether this service has external ingress | Container App `ingress.external` |
-| `Command` | `[]string` | Container command override | Container App `template.containers[0].command` |
+| `ImageDefault` | `string` | Default image value | `.tmpl.yaml` → `template.containers[0].image` (Go template `{{ .Image }}`) or `{name}:latest` |
+| `Ports` | `[]RadiusPort` | Port definitions | `.tmpl.yaml` → `configuration.ingress` |
+| `EnvVars` | `map[string]string` | Environment variables | `.tmpl.yaml` → `template.containers[0].env[]` |
+| `Connections` | `[]RadiusConnection` | Connections to other resources | Derived from `ConnectionStrings__*` and `services__*` env vars |
+| `IsExternal` | `bool` | Whether this service has external ingress | `.tmpl.yaml` → `ingress.external` |
+| `Command` | `[]string` | Container command override | `.tmpl.yaml` → `template.containers[0].command` |
 
 ### RadiusPort
 
@@ -105,9 +172,9 @@ Represents a port definition on a container.
 
 | Field | Type | Description | Source |
 |-------|------|-------------|--------|
-| `Name` | `string` | Port name (e.g., `http`, `tcp`) | Derived from transport type |
-| `ContainerPort` | `int` | Port number | `ingress.targetPort` |
-| `Protocol` | `string` | Protocol (`TCP`, `UDP`) | `ingress.transport` |
+| `Name` | `string` | Port name (e.g., `http`, `tcp`) | Derived from `ingress.transport` in `.tmpl.yaml` |
+| `ContainerPort` | `int` | Port number | `.tmpl.yaml` → `ingress.targetPort` or `{{ targetPortOrDefault N }}` |
+| `Protocol` | `string` | Protocol (`TCP`, `UDP`) | `.tmpl.yaml` → `ingress.transport` |
 | `IsPlaceholder` | `bool` | Whether this port is a placeholder (not found in source) | Gap detection |
 
 ### RadiusConnection
@@ -116,19 +183,19 @@ Represents a connection from one resource to another.
 
 | Field | Type | Description | Source |
 |-------|------|-------------|--------|
-| `Name` | `string` | Connection name (e.g., `cache`, `api`) | Derived from `ConnectionStrings__` suffix |
-| `TargetResourceName` | `string` | Symbolic name of the target resource | Parsed from connection string or env var |
+| `Name` | `string` | Connection name (e.g., `cache`, `apiservice`) | Derived from `ConnectionStrings__` suffix or `services__` prefix |
+| `TargetResourceName` | `string` | Symbolic name of the target resource | Parsed from env var name pattern |
 | `Source` | `string` | Bicep expression for the connection source (e.g., `cache.id`) | Mapper output |
 
 ### RadiusDependency
 
-Represents a portable resource (e.g., Redis).
+Represents a portable resource (e.g., Redis) or a placeholder for unsupported types.
 
 | Field | Type | Description | Source |
 |-------|------|-------------|--------|
-| `Name` | `string` | Resource name | Redis container/resource name |
-| `Type` | `string` | Radius resource type (e.g., `Applications.Datastores/redisCaches`) | Mapped from Azure resource type |
-| `IsRecipeBacked` | `bool` | Whether provisioned by Recipe | Always `true` for PoC |
+| `Name` | `string` | Resource name | `.tmpl.yaml` → `tags.aspire-resource-name` |
+| `Type` | `string` | Radius resource type (e.g., `Applications.Datastores/redisCaches`, `Applications.Datastores/sqlDatabases`) or empty for placeholders | Mapped from container image/port heuristics |
+| `IsRecipeBacked` | `bool` | Whether provisioned by Recipe | `true` for supported types |
 | `IsPlaceholder` | `bool` | Whether this is a placeholder (unsupported type) | Gap detection |
 | `PlaceholderComment` | `string` | Comment explaining the placeholder | Reporter output |
 
@@ -189,8 +256,8 @@ Aggregates all mapping entries for output.
 The conversion is stateless — there are no state transitions. The pipeline is:
 
 ```
-azd infra synth Bicep files
-    → [Parser] → []BicepFile (Parsed Model)
+Aspire app directory (azd infra synth output)
+    → [Parser] → AspireAppDescriptor (Parsed Model: ServiceTemplates + MainBicep)
     → [Mapper] → RadiusApplication + MappingReport (Radius Model + Lineage)
     → [Generator] → app.bicep (output file)
     → [Reporter] → mapping-report.md + console output
@@ -212,22 +279,29 @@ To guarantee byte-for-byte identical output on re-runs (FR-012, SC-006, User Sto
 
 | Entity | Rule | Error Behavior |
 |--------|------|----------------|
-| Input directory | Must exist and contain at least one `.bicep` file | Fail with FR-010 error message |
-| Input directory | Must contain a `main.bicep` | Fail with FR-010 error message |
-| BicepResource | Must have a valid `Type` field | Skip resource, log as gap |
-| Container App | Must have `template.containers` array | Log port/image as gaps, generate placeholder |
-| Redis resource | Must be `Microsoft.Cache/redis` or Redis container image | Map to `Applications.Datastores/redisCaches` |
-| Multiple Aspire projects | More than one `main.bicep` or multiple managed environments | Fail with FR-011 error message |
-| Port binding | `ingress.targetPort` must be present | Use placeholder port, log as gap (FR-007) |
-| Image reference | `template.containers[0].image` | Use `{name}:latest` default, log as assumption (FR-006) |
+| Input directory | Must exist and contain an AppHost project with `infra/` directory containing `.tmpl.yaml` files | Fail with FR-010 error message |
+| Input directory | Must contain a solution-level `infra/main.bicep` | Fail with FR-010 error message |
+| ServiceTemplate | Must have `tags.aspire-resource-name` or a parseable filename | Skip template, log as gap |
+| Service template | Must have `template.containers` array | Log port/image as gaps, generate placeholder |
+| Redis dependency | Identified by port 6379/tcp transport or `redis` in image/name | Map to `Applications.Datastores/redisCaches` |
+| SQL Server dependency | Identified by port 1433/tcp transport or `sql`/`mssql`/`sqlserver` in image/name | Map to `Applications.Datastores/sqlDatabases` |
+| Multiple Aspire projects | More than one AppHost `infra/` directory detected | Fail with FR-011 error message |
+| Port binding | `ingress.targetPort` or `{{ targetPortOrDefault N }}` must be present | Use placeholder port, log as gap (FR-007) |
+| Image reference | `template.containers[0].image` (typically `{{ .Image }}`) | Use `{name}:latest` default, log as assumption (FR-006) |
+| Go template syntax | `{{ ... }}` expressions in YAML values | Strip/replace before YAML parsing (R-008) |
 
 ## Dependency Type Mapping Table
 
-| Azure Resource Type | Radius Resource Type | Notes |
+Dependencies are classified by heuristics applied to the `.tmpl.yaml` content (port number, transport protocol, container name/image).
+
+| Heuristic | Radius Resource Type | Notes |
 |---|---|---|
-| `Microsoft.Cache/redis` | `Applications.Datastores/redisCaches` | Recipe-backed |
-| Redis container image (`redis:*`) | `Applications.Datastores/redisCaches` | Recipe-backed |
-| `Microsoft.DocumentDB/databaseAccounts` (MongoDB) | `Applications.Datastores/mongoDatabases` | Recipe-backed (future) |
-| `Microsoft.Sql/servers` | `Applications.Datastores/sqlDatabases` | Recipe-backed (future) |
-| `Microsoft.DBforPostgreSQL/flexibleServers` | Placeholder | No Portable Resource equivalent |
-| Other Azure resources | Placeholder with comment | Documented gap per FR-004 |
+| Port 6379 + transport `tcp` (Redis container) | `Applications.Datastores/redisCaches` | Recipe-backed. Reference: `cache.tmpl.yaml` |
+| `redis` in container image or resource name | `Applications.Datastores/redisCaches` | Recipe-backed |
+| Port 1433 + transport `tcp` (SQL Server container) | `Applications.Datastores/sqlDatabases` | Recipe-backed. Reference: `sqlserver.tmpl.yaml` |
+| `sql` or `mssql` or `sqlserver` in container image or resource name | `Applications.Datastores/sqlDatabases` | Recipe-backed |
+| Port 5432 + transport `tcp` (PostgreSQL container) | Placeholder | No Portable Resource equivalent |
+| `postgres` in container image or resource name | Placeholder | No Portable Resource equivalent |
+| `mongo` in container image or resource name | `Applications.Datastores/mongoDatabases` | Recipe-backed (future) |
+| `rabbitmq` in container image or resource name | `Applications.Messaging/rabbitMQQueues` | Recipe-backed (future) |
+| Other / unrecognized | Placeholder with comment | Documented gap per FR-004 |
