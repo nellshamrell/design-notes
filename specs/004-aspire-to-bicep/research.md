@@ -79,12 +79,14 @@ example-aspire-app/
 
 ### R-004: What Radius resource types/API versions should the output use?
 
-**Decision**: Use the `2025-08-01-preview` API version with the newer `Radius.Core/applications`, `Radius.Compute/containers`, and `Applications.Datastores/redisCaches` resource type names.
+**Decision**: Use the `2023-10-01-preview` API version with `Applications.Core/applications`, `Applications.Core/containers`, and `Applications.Datastores/redisCaches` resource type names. Image parameters use `IMAGE_PLACEHOLDER` as the default value, overridable at deploy time. Environment variables for dependency connections use Bicep resource expressions with `{ value: }` object syntax (e.g., `{ value: sqlserver.listSecrets().connectionString }`).
 
-**Rationale**: The existing generated `app.bicep` at the radius repo root uses `Radius.Core/applications@2025-08-01-preview` and `Radius.Compute/containers@2025-08-01-preview`. The TypeSpec definitions confirm these are the current API types. The `extension radius` import is used instead of the older `import radius as radius` pattern. For Redis, `Applications.Datastores/redisCaches` is the established Portable Resource type.
+**Rationale**: The existing hand-crafted `app.bicep` reference output uses `Applications.Core/applications@2023-10-01-preview` and `Applications.Core/containers@2023-10-01-preview`. This is the established, stable API surface. The `extension radius` import is used instead of the older `import radius as radius` pattern. For Redis, `Applications.Datastores/redisCaches` is the established Portable Resource type. Image parameters default to `IMAGE_PLACEHOLDER` to make it explicit that the developer must provide actual image references at deploy time via `rad deploy --parameters`. Environment variables that reference dependency properties are rendered as Bicep resource expressions (e.g., `sqlserver.listSecrets().connectionString`) rather than raw string placeholders, enabling the generated `app.bicep` to work directly with Radius Portable Resource APIs at deploy time.
 
 **Alternatives considered**:
-- **Older `Applications.Core/containers` naming**: Still valid but the codebase has shifted to the `Radius.Compute/containers` naming in newer code. Use the newer convention.
+- **Newer `Radius.Core/applications` and `Radius.Compute/containers` naming with `2025-08-01-preview`**: Available but not yet the established convention in reference outputs. Can be adopted in a future update.
+- **Using `tags.azd-service-name` for image defaults**: Results in names like `aspireapp-apiservice:latest` that may not match actual container image names. `IMAGE_PLACEHOLDER` makes the intent explicit.
+- **Plain string env var values with `{{secret:...}}` placeholders**: Simpler to generate but requires post-processing before deployment. Bicep resource expressions work immediately with `rad deploy`.
 
 ---
 
@@ -96,11 +98,11 @@ example-aspire-app/
 
 | azd/Aspire Concept | YAML Template Location | Radius Target |
 |---|---|---|
-| Container App (service project) | `<AppHost>/infra/<service>.tmpl.yaml` → `properties.template.containers` | `Radius.Compute/containers` |
+| Container App (service project) | `<AppHost>/infra/<service>.tmpl.yaml` → `properties.template.containers` | `Applications.Core/containers` |
 | `properties.configuration.ingress.targetPort` | `.tmpl.yaml` → `properties.configuration.ingress` | `container.ports[name].containerPort` |
 | `properties.configuration.ingress.external` | `.tmpl.yaml` → `properties.configuration.ingress` | Determines if service has external access |
-| Container image (`{{ .Image }}`) | `.tmpl.yaml` → `properties.template.containers[0].image` | Bicep `param <name>Image string` + `container.image: <name>Image` |
-| `template.containers[0].env[]` | `.tmpl.yaml` → `properties.template.containers[0].env` | `container.env` map |
+| Container image (`{{ .Image }}`) | `.tmpl.yaml` → `properties.template.containers[0].image` | Bicep `param <name>Image string = 'IMAGE_PLACEHOLDER'` + `container.image: <name>Image` |
+| `template.containers[0].env[]` | `.tmpl.yaml` → `properties.template.containers[0].env` | `container.env` map with `{ value: }` syntax. Dependency-backed vars transformed to Bicep resource expressions |
 | `ConnectionStrings__<name>` env var | `.tmpl.yaml` → env entry with secretRef | `connections.<name>` on Container resource |
 | `services__<name>__http__0` env var | `.tmpl.yaml` → env entry with URL value | `connections.<name>` on Container resource |
 | Redis container (`cache.tmpl.yaml` with port 6379/tcp) | `.tmpl.yaml` with `aspire-resource-name: cache` tag | `Applications.Datastores/redisCaches` (Recipe-backed) |

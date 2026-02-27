@@ -11,10 +11,10 @@ param environment string
 param applicationName string = 'example-aspire-app'
 
 @description('Container image for apiservice.')
-param apiserviceImage string = 'my-namespace/aspireapp-apiservice:latest'
+param apiserviceImage string = 'IMAGE_PLACEHOLDER'
 
 @description('Container image for webfrontend.')
-param webfrontendImage string = 'my-namespace/aspireapp-web:latest'
+param webfrontendImage string = 'IMAGE_PLACEHOLDER'
 
 resource app 'Applications.Core/applications@2023-10-01-preview' = {
   name: applicationName
