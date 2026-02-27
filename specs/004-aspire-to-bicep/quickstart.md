@@ -68,8 +68,10 @@ The built binary is at `./dist/radd` (or `./dist/rad.exe` on Windows).
 ```bash
 cd ~/aspire-demo/AspireDemo.AppHost
 
-rad bicep generate --from-aspire ./infra
+rad bicep generate --from-aspire ./infra --parameter image-namespace=my-namespace
 ```
+
+The `--parameter image-namespace=my-namespace` flag prefixes all generated container image defaults with `my-namespace/`.
 
 **Expected console output:**
 
@@ -77,6 +79,7 @@ rad bicep generate --from-aspire ./infra
 Converting Aspire artifacts from: ./infra
   Found 2 services: apiservice, webfrontend
   Found 2 dependencies: cache (Redis), sqlserver (SQL Server)
+  Parameter: image-namespace=my-namespace
 
 Generating app.bicep...
   ✓ Application: aspire-demo
@@ -117,10 +120,10 @@ param environment string
 param applicationName string = 'aspire-demo'
 
 @description('Container image for apiservice.')
-param apiserviceImage string = 'apiservice:latest'
+param apiserviceImage string = 'my-namespace/apiservice:latest'
 
 @description('Container image for webfrontend.')
-param webfrontendImage string = 'webfrontend:latest'
+param webfrontendImage string = 'my-namespace/webfrontend:latest'
 
 resource app 'Radius.Core/applications@2025-08-01-preview' = {
   name: applicationName
@@ -191,7 +194,8 @@ resource sqlserver 'Applications.Datastores/sqlDatabases@2023-10-01-preview' = {
 ```
 
 Key points:
-- Image references are Bicep parameters — override at deploy time
+- Image references are Bicep parameters — prefixed with `my-namespace/` via `--parameter image-namespace`
+- Override individual images at deploy time with `--parameters` if needed
 - Redis uses a Recipe-backed Portable Resource (no manual infra provisioning)
 - SQL Server uses a Recipe-backed Portable Resource (`sqlDatabases`)
 - Connections express the `webfrontend → apiservice → sqlserver` and `webfrontend → cache` topology
@@ -224,11 +228,11 @@ rad init
 docker build -t apiservice:latest ./AspireDemo.ApiService
 docker build -t webfrontend:latest ./AspireDemo.Web
 
-# Deploy the converted application
+# Deploy the converted application (images already namespaced)
 rad deploy app.bicep
 ```
 
-Override images if using a registry:
+Override images if using a different registry:
 
 ```bash
 rad deploy app.bicep \
@@ -269,6 +273,9 @@ rad bicep generate --from-aspire ./infra --app-name my-custom-app
 
 # Suppress console report (file still generated)
 rad bicep generate --from-aspire ./infra --quiet
+
+# Set image namespace prefix for all container image defaults
+rad bicep generate --from-aspire ./infra --parameter image-namespace=my-namespace
 ```
 
 ## Troubleshooting

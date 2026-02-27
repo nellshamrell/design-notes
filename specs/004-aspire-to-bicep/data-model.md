@@ -159,7 +159,7 @@ Represents a `Radius.Compute/containers` resource.
 |-------|------|-------------|--------|
 | `Name` | `string` | Container resource name | `.tmpl.yaml` → `tags.aspire-resource-name` or container `name` |
 | `ImageParam` | `string` | Bicep parameter name for the image | Derived: `{name}Image` |
-| `ImageDefault` | `string` | Default image value | `.tmpl.yaml` → `template.containers[0].image` (Go template `{{ .Image }}`) or `{name}:latest` |
+| `ImageDefault` | `string` | Default image value | `.tmpl.yaml` → `template.containers[0].image` (Go template `{{ .Image }}`) or `{name}:latest`. When `--parameter image-namespace=<prefix>` is provided, becomes `<prefix>/{name}:latest` |
 | `Ports` | `[]RadiusPort` | Port definitions | `.tmpl.yaml` → `configuration.ingress` |
 | `EnvVars` | `map[string]string` | Environment variables | `.tmpl.yaml` → `template.containers[0].env[]` |
 | `Connections` | `[]RadiusConnection` | Connections to other resources | Derived from `ConnectionStrings__*` and `services__*` env vars |
@@ -287,7 +287,7 @@ To guarantee byte-for-byte identical output on re-runs (FR-012, SC-006, User Sto
 | SQL Server dependency | Identified by port 1433/tcp transport or `sql`/`mssql`/`sqlserver` in image/name | Map to `Applications.Datastores/sqlDatabases` |
 | Multiple Aspire projects | More than one AppHost `infra/` directory detected | Fail with FR-011 error message |
 | Port binding | `ingress.targetPort` or `{{ targetPortOrDefault N }}` must be present | Use placeholder port, log as gap (FR-007) |
-| Image reference | `template.containers[0].image` (typically `{{ .Image }}`) | Use `{name}:latest` default, log as assumption (FR-006) |
+| Image reference | `template.containers[0].image` (typically `{{ .Image }}`) | Use `{name}:latest` default (or `<image-namespace>/{name}:latest` when `--parameter image-namespace` is provided), log as assumption (FR-006) |
 | Go template syntax | `{{ ... }}` expressions in YAML values | Strip/replace before YAML parsing (R-008) |
 
 ## Dependency Type Mapping Table
