@@ -127,14 +127,24 @@
 
 **Note**: The `--output dot` format switch is wired in T010 (Run branch) for file mode. This phase implements the `displayDot()` function, its tests, and adds `--output dot` support to the existing live-mode code path (per FR-021 and US6 Scenario 4).
 
-- [ ] T022 [US6] Create `pkg/cli/cmd/app/graph/display_dot.go` with `displayDot(resources []*ApplicationGraphResource, appName string) string` — produce valid Graphviz DOT digraph with `rankdir=LR`, Radius resource nodes as boxes (lightblue fill, label `name\n(type)`), non-Radius resource nodes as ellipses (lightyellow fill), directed edges for outbound connections, deduplicated edges, deterministic ordering
-- [ ] T023 [US6] Create `pkg/cli/cmd/app/graph/display_dot_test.go` with unit tests — single resource (valid digraph wrapper + one node), two resources with connection (node + directed edge), non-Radius resource (ellipse shape, lightyellow), empty resources (empty digraph), deterministic output (same input → same output), special characters in names are escaped
-- [ ] T024 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `simple-app.json` + `--output dot` → output starts with `digraph`, contains node labels matching resource names and types, contains edge `->` for connections
+- [X] T022 [US6] Create `pkg/cli/cmd/app/graph/display_dot.go` with `displayDot(resources []*ApplicationGraphResource, appName string) string` — produce valid Graphviz DOT digraph with `rankdir=LR`, Radius resource nodes as boxes (lightblue fill, label `name\n(type)`), non-Radius resource nodes as ellipses (lightyellow fill), directed edges for outbound connections, deduplicated edges, deterministic ordering
+- [X] T023 [US6] Create `pkg/cli/cmd/app/graph/display_dot_test.go` with unit tests — single resource (valid digraph wrapper + one node), two resources with connection (node + directed edge), non-Radius resource (ellipse shape, lightyellow), empty resources (empty digraph), deterministic output (same input → same output), special characters in names are escaped
+- [X] T024 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `simple-app.json` + `--output dot` → output starts with `digraph`, contains node labels matching resource names and types, contains edge `->` for connections
 - [ ] T025 [P] [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `non-radius.json` + `--output dot` → non-Radius resources use `shape=ellipse` and `fillcolor=lightyellow`
-- [ ] T026 [US6] Modify live-mode `Run()` branch in `pkg/cli/cmd/app/graph/graph.go` to handle `--output dot` — after `computeGraph()` returns in the existing live path, add format switch case for `"dot"` calling `displayDot(response.Resources, appName)` so that `rad app graph myapp --output dot` works without `--file`
-- [ ] T027 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: live-mode `rad app graph myapp --output dot` → output starts with `digraph`, contains expected node labels and edges (requires mock API client returning test resources)
+- [X] T026 [US6] Modify live-mode `Run()` branch in `pkg/cli/cmd/app/graph/graph.go` to handle `--output dot` — after `computeGraph()` returns in the existing live path, add format switch case for `"dot"` calling `displayDot(response.Resources, appName)` so that `rad app graph myapp --output dot` works without `--file`
+- [X] T027 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: live-mode `rad app graph myapp --output dot` → output starts with `digraph`, contains expected node labels and edges (requires mock API client returning test resources)
 
 **Checkpoint**: `--output dot` produces valid Graphviz DOT in both `--file` mode and live mode — visual graph generation works
+
+### Implementation Notes (T022-T026)
+
+- `displayDot()` escapes double quotes in resource names/types using `strings.ReplaceAll` for DOT string safety
+- Node IDs use resource name (escaped); labels use `name\n(type)` format
+- Radius vs non-Radius detection reuses `isRadiusResource("", type)` from `template.go`
+- Edges are deduplicated using a `seen` map keyed by `source->target`
+- Output is deterministic: resources sorted by type then name; edges sorted by source then target
+- Both `runFileMode()` and `runLiveMode()` switch on `output.FormatDot` to call `displayDot()`
+- The `FormatDot` constant (`"dot"`) is already registered in `pkg/cli/output/formats.go` `AllFormats()`
 
 ---
 
@@ -142,6 +152,8 @@
 
 **Purpose**: Documentation, code quality, and end-to-end validation
 
+- [X] T028a Fix error output routing in `cmd/rad/cmd/root.go`: change all `fmt.Println`/`fmt.Printf` calls in `Execute()` and `handlePanic()` to write to `os.Stderr` instead of stdout — ensures errors never pollute piped output (e.g., `--output dot | dot -Tpng`)
+- [X] T028b Fix Bicep progress output routing in `cmd/rad/cmd/root.go`: change the Bicep client's `Output` writer from `RootCmd.OutOrStdout()` to `RootCmd.ErrOrStderr()` in `initSubCommands()` — ensures `PrepareTemplate()` progress messages (`"Building ..."`, `"Downloading Bicep ..."`) go to stderr, preventing corruption of piped DOT/JSON output
 - [ ] T028 [P] Add godoc comments to all exported functions and types in `pkg/cli/cmd/app/graph/template.go` and `pkg/cli/cmd/app/graph/display_dot.go`
 - [ ] T029 [P] Update `rad app graph` reference documentation in docs repo to document the `--file` flag, `--output dot` format, file mode behavior, and example usage including `--output dot | dot -Tpng -o graph.png`
 - [ ] T030 Run quickstart.md success verification checklist end-to-end (11 verification items)

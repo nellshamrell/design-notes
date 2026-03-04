@@ -28,6 +28,7 @@ Add a `--file` flag to the `rad app graph` CLI command that compiles a Bicep or 
 | Graph builder | `pkg/corerp/frontend/controller/applications/graph_util.go` | `computeGraph(appResources, envResources) *ApplicationGraphResponse` |
 | Source resolver | `pkg/corerp/frontend/controller/applications/graph_util.go` | `findSourceResource(source, allResources) (string, error)` |
 | Bicep compiler | `pkg/cli/bicep/types.go` | `Interface.PrepareTemplate(filePath) (map[string]any, error)` |
+| Bicep progress output | `cmd/rad/cmd/root.go` | Bicep `OutputWriter` wired to `RootCmd.ErrOrStderr()` to keep stdout clean |
 | GenericResource | `pkg/cli/clients_new/generated/` | `GenericResource{ID, Name, Type, Properties}` |
 | Graph types | `pkg/corerp/api/v20231001preview/` | `ApplicationGraphResponse`, `ApplicationGraphResource`, `ApplicationGraphConnection` |
 | Output flags | `pkg/cli/cmd/commonflags/flags.go` | `AddOutputFlag(cmd)` — registers `--output` / `-o` |
@@ -86,6 +87,9 @@ pkg/cli/cmd/app/graph/
 pkg/corerp/frontend/controller/applications/
 ├── graph_util.go        # Modified: export computeGraph → ComputeGraph
 └── graph_util_test.go   # Unchanged
+
+cmd/rad/cmd/
+└── root.go              # Modified: Bicep Output writer → ErrOrStderr()
 ```
 
 **Structure Decision**: This feature adds four new files (`template.go`, `template_test.go`, `display_dot.go`, `display_dot_test.go`) in the existing `pkg/cli/cmd/app/graph/` package and modifies the existing `graph.go` and `graph_test.go`. No new packages or abstraction layers are introduced. The ARM template extraction logic is co-located with the graph command since it is specific to this feature's `--file` mode. The DOT display function follows the same pattern as the existing `display.go` for text output.
