@@ -21,8 +21,8 @@
 
 **Purpose**: Export shared function and create test fixture infrastructure
 
-- [ ] T001 Export `computeGraph` → `ComputeGraph` in `pkg/corerp/frontend/controller/applications/graph_util.go` and update all internal callers in the same package to use the exported name
-- [ ] T002 [P] Create ARM JSON test fixture files in `pkg/cli/cmd/app/graph/testdata/` per quickstart.md fixture table: `simple-app.json` (1 app, 2 containers, 1 connection), `no-app.json` (resources without application resource), `multi-app.json` (2 application resources), `non-radius.json` (mixed Radius and Azure resources), `unresolvable.json` (parameterized connection sources), `empty.json` (empty resources map), `with-modules.json` (Microsoft.Resources/deployments entries)
+- [X] T001 Export `computeGraph` → `ComputeGraph` in `pkg/corerp/frontend/controller/applications/graph_util.go` and update all internal callers in the same package to use the exported name
+- [X] T002 [P] Create ARM JSON test fixture files in `pkg/cli/cmd/app/graph/testdata/` per quickstart.md fixture table: `simple-app.json` (1 app, 2 containers, 1 connection), `no-app.json` (resources without application resource), `multi-app.json` (2 application resources), `non-radius.json` (mixed Radius and Azure resources), `unresolvable.json` (parameterized connection sources), `empty.json` (empty resources map), `with-modules.json` (Microsoft.Resources/deployments entries)
 
 ---
 
@@ -32,8 +32,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create `pkg/cli/cmd/app/graph/template.go` with `resourceEntry` struct, `stripAPIVersion`, `synthesizeResourceID`, `isRadiusResource`, and `resolveExpression` functions per contracts/template-extraction.md
-- [ ] T004 Create `pkg/cli/cmd/app/graph/template_test.go` with unit tests for `stripAPIVersion` (type with/without API version), `synthesizeResourceID` (valid ID format), `isRadiusResource` (Radius import, Applications.* prefix, Radius.* prefix, non-Radius), and `resolveExpression` (literal pass-through, `[reference('X').id]` match, unsupported expression returns false)
+- [X] T003 Create `pkg/cli/cmd/app/graph/template.go` with `resourceEntry` struct, `stripAPIVersion`, `synthesizeResourceID`, `isRadiusResource`, and `resolveExpression` functions per contracts/template-extraction.md
+- [X] T004 Create `pkg/cli/cmd/app/graph/template_test.go` with unit tests for `stripAPIVersion` (type with/without API version), `synthesizeResourceID` (valid ID format), `isRadiusResource` (Radius import, Applications.* prefix, Radius.* prefix, non-Radius), and `resolveExpression` (literal pass-through, `[reference('X').id]` match, unsupported expression returns false)
 
 **Checkpoint**: All helper functions tested and working — extractResourcesFromTemplate can now be built on top
 
@@ -47,13 +47,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Implement `extractResourcesFromTemplate` in `pkg/cli/cmd/app/graph/template.go` — iterate ARM JSON resources map, build `resourceEntry` lookup, resolve expressions in connections/routes/application fields, construct `[]generated.GenericResource` with synthesized IDs, detect conditions/modules/non-Radius resources for warnings, sort deterministically
-- [ ] T006 [US1] Implement `scopeToApplication` in `pkg/cli/cmd/app/graph/template.go` — count application resources from `[]generated.GenericResource` by checking `Type` field (0 → all resources implicit app, 1 → filter to referencing resources, 2+ → error), return app name and filtered resource list. Note: this replaces the `countApplicationResources` helper from the contract, which operates on the internal `resourceEntry` type; `scopeToApplication` counts directly from the post-extraction `GenericResource` slice, making `countApplicationResources` unnecessary as a separate exported function
-- [ ] T007 [US1] Add unit tests for `extractResourcesFromTemplate` and `scopeToApplication` in `pkg/cli/cmd/app/graph/template_test.go` — test with simple-app fixture (correct GenericResource construction, synthesized IDs, resolved connections), empty resources (no error, empty list), non-Radius resources (included with minimal properties), scopeToApplication with 1 app (filtered result)
-- [ ] T008 [P] [US1] Add `FilePath string` and `BicepClient bicep.Interface` fields to `Runner` struct, register `--file` / `-f` string flag in `NewCommand()` in `pkg/cli/cmd/app/graph/graph.go`
-- [ ] T009 [US1] Implement file-mode branch in `Validate()` in `pkg/cli/cmd/app/graph/graph.go` — read `--file` flag, check mutual exclusivity with positional app name arg, validate file exists with `os.Stat`, read `--output` flag, skip workspace/scope/application validation
-- [ ] T010 [US1] Implement file-mode branch in `Run()` in `pkg/cli/cmd/app/graph/graph.go` — call `PrepareTemplate(FilePath)`, call `extractResourcesFromTemplate`, emit warnings to stderr, call `scopeToApplication`, call `applications.ComputeGraph(appResources, nil)`, switch on format for text (`display()`), JSON (`Output.WriteFormatted`), or DOT (`displayDot()`) output
-- [ ] T011 [US1] Add integration tests for `--file` mode in `pkg/cli/cmd/app/graph/graph_test.go` — test with `simple-app.json` fixture producing expected text output, test with `--output json` producing valid `ApplicationGraphResponse` JSON, test with `--output dot` producing valid DOT digraph output, test with `empty.json` producing empty graph message, test file-not-found path producing error
+- [X] T005 [US1] Implement `extractResourcesFromTemplate` in `pkg/cli/cmd/app/graph/template.go` — iterate ARM JSON resources map, build `resourceEntry` lookup, resolve expressions in connections/routes/application fields, construct `[]generated.GenericResource` with synthesized IDs, detect conditions/modules/non-Radius resources for warnings, sort deterministically
+- [X] T006 [US1] Implement `scopeToApplication` in `pkg/cli/cmd/app/graph/template.go` — count application resources from `[]generated.GenericResource` by checking `Type` field (0 → all resources implicit app, 1 → filter to referencing resources, 2+ → error), return app name and filtered resource list. Note: this replaces the `countApplicationResources` helper from the contract, which operates on the internal `resourceEntry` type; `scopeToApplication` counts directly from the post-extraction `GenericResource` slice, making `countApplicationResources` unnecessary as a separate exported function
+- [X] T007 [US1] Add unit tests for `extractResourcesFromTemplate` and `scopeToApplication` in `pkg/cli/cmd/app/graph/template_test.go` — test with simple-app fixture (correct GenericResource construction, synthesized IDs, resolved connections), empty resources (no error, empty list), non-Radius resources (included with minimal properties), scopeToApplication with 1 app (filtered result)
+- [X] T008 [P] [US1] Add `FilePath string` and `BicepClient bicep.Interface` fields to `Runner` struct, register `--file` / `-f` string flag in `NewCommand()` in `pkg/cli/cmd/app/graph/graph.go`
+- [X] T009 [US1] Implement file-mode branch in `Validate()` in `pkg/cli/cmd/app/graph/graph.go` — read `--file` flag, check mutual exclusivity with positional app name arg, validate file exists with `os.Stat`, read `--output` flag, skip workspace/scope/application validation
+- [X] T010 [US1] Implement file-mode branch in `Run()` in `pkg/cli/cmd/app/graph/graph.go` — call `PrepareTemplate(FilePath)`, call `extractResourcesFromTemplate`, emit warnings to stderr, call `scopeToApplication`, call `applications.ComputeGraph(appResources, nil)`, switch on format for text (`display()`), JSON (`Output.WriteFormatted`), or DOT (`displayDot()`) output
+- [X] T011 [US1] Add integration tests for `--file` mode in `pkg/cli/cmd/app/graph/graph_test.go` — test with `simple-app.json` fixture producing expected text output, test with `--output json` producing valid `ApplicationGraphResponse` JSON, test with `--output dot` producing valid DOT digraph output, test with `empty.json` producing empty graph message, test file-not-found path producing error
 
 **Checkpoint**: `rad app graph --file <path>` works end-to-end with text and JSON output — MVP is functional
 
