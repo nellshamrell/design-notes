@@ -69,22 +69,6 @@ A team lead wants to share a preview graph with teammates for discussion during 
 
 ---
 
-### User Story 4 - Export Graph as DOT Format (Priority: P3)
-
-A developer viewing a graph in the dashboard wants to export it in Graphviz DOT format so they can render it with external tools, include it in documentation, or embed it in technical diagrams. The export produces output consistent with the format already used by the Radius CLI.
-
-**Why this priority**: This is a convenience/interoperability feature that adds value but is not essential for the core visualization workflow.
-
-**Independent Test**: Can be tested by importing a graph, clicking the export option, and verifying the downloaded DOT file matches the expected format and can be rendered by Graphviz.
-
-**Acceptance Scenarios**:
-
-1. **Given** a preview graph is rendered, **When** the user clicks an "Export as DOT" action, **Then** a file named `graph.dot` is downloaded containing the graph in Graphviz DOT format.
-2. **Given** a preview graph is rendered, **When** the user exports to DOT format, **Then** the output uses the same formatting conventions as the Radius CLI's DOT output.
-3. **Given** a preview graph is rendered, **When** the user clicks a "Copy DOT to Clipboard" action, **Then** the DOT format text is copied to the clipboard.
-
----
-
 ### Edge Cases
 
 - What happens when the user uploads an empty file (0 bytes)?
@@ -110,12 +94,10 @@ A developer viewing a graph in the dashboard wants to export it in Graphviz DOT 
 - **FR-010**: The dashboard MUST generate a shareable URL that encodes the current preview graph data entirely in the URL (no server-side storage).
 - **FR-011**: The dashboard MUST render a graph correctly when opened via a shareable URL without requiring any additional user action.
 - **FR-012**: When the graph data exceeds the maximum encodable URL size, the dashboard MUST display a clear message informing the user that the graph is too large to share via URL and MUST suggest exporting the JSON file as a fallback.
-- **FR-013**: The dashboard MUST support exporting the current graph in Graphviz DOT format, consistent with the Radius CLI's DOT output format.
-- **FR-014**: The dashboard MUST allow DOT export via file download and clipboard copy.
-- **FR-015**: The preview graph viewing workflow MUST function without any Radius API or control plane connection.
-- **FR-016**: The dashboard MUST handle empty graphs (zero resources) gracefully, displaying an appropriate message rather than a blank view.
-- **FR-017**: The dashboard MUST silently replace the currently displayed graph when new data is imported, with no confirmation prompt and no stale state retained.
-- **FR-018**: The dashboard MUST display a warning message (e.g., "Large graph — performance may be affected") when the imported graph exceeds 50 resources or 100 connections, but MUST still render the graph.
+- **FR-013**: The preview graph viewing workflow MUST function without any Radius API or control plane connection.
+- **FR-014**: The dashboard MUST handle empty graphs (zero resources) gracefully, displaying an appropriate message rather than a blank view.
+- **FR-015**: The dashboard MUST silently replace the currently displayed graph when new data is imported, with no confirmation prompt and no stale state retained.
+- **FR-016**: The dashboard MUST display a warning message (e.g., "Large graph — performance may be affected") when the imported graph exceeds 50 resources or 100 connections, but MUST still render the graph.
 
 ### Key Entities
 
@@ -133,8 +115,7 @@ A developer viewing a graph in the dashboard wants to export it in Graphviz DOT 
 - **SC-003**: Users can visually distinguish between a preview graph and a live graph within 2 seconds of viewing, without reading text labels.
 - **SC-004**: Graphs with up to 50 resources and 100 connections render and remain interactive (pan, zoom) without noticeable lag.
 - **SC-005**: Shareable URLs successfully render the encoded graph for recipients 100% of the time when the URL is not corrupted or truncated.
-- **SC-006**: Exported DOT files are valid Graphviz input that renders correctly with standard Graphviz tools.
-- **SC-007**: The preview graph workflow functions fully without any network connection to a Radius control plane.
+- **SC-006**: The preview graph workflow functions fully without any network connection to a Radius control plane.
 
 ## Assumptions
 
@@ -145,6 +126,7 @@ A developer viewing a graph in the dashboard wants to export it in Graphviz DOT 
 
 ## Out of Scope
 
+- Exporting graphs in Graphviz DOT format (may be added in a future iteration)
 - Deploying applications from the dashboard
 - Uploading and compiling Bicep files directly in the dashboard (users should use the CLI to generate JSON graph data)
 - Editing Bicep files within the dashboard

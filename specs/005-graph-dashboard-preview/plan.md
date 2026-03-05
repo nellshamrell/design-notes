@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a dedicated `/preview` page to the Radius Dashboard where users can import `ApplicationGraphResponse` JSON (produced by `rad app graph --file --output json`) and visualize it using the existing `AppGraph` React Flow component. Preview graphs are styled distinctly (dashed borders, muted colors, "Preview" banner) to differentiate them from live deployed graphs. The page also supports shareable URLs (compressed data in URL hash fragment), DOT format export, and operates fully offline without any Radius API connection.
+Add a dedicated `/preview` page to the Radius Dashboard where users can import `ApplicationGraphResponse` JSON (produced by `rad app graph --file --output json`) and visualize it using the existing `AppGraph` React Flow component. Preview graphs are styled distinctly (dashed borders, muted colors, "Preview" banner) to differentiate them from live deployed graphs. The page also supports shareable URLs (compressed data in URL hash fragment) and operates fully offline without any Radius API connection.
 
 ## Technical Context
 
@@ -32,7 +32,7 @@ Add a dedicated `/preview` page to the Radius Dashboard where users can import `
 | V. Collaboration-Centric | PASS | Enables developers to share architecture previews for PR review. |
 | VI. Open Source | PASS | Design spec in design-notes repo; public discussion before implementation. |
 | VII. Simplicity Over Cleverness | PASS | Reuses existing AppGraph/ResourceNode components; manual validation over schema library. |
-| VIII. Separation of Concerns | PASS | Validation, transformation, export, URL encoding in separate modules. |
+| VIII. Separation of Concerns | PASS | Validation, transformation, URL encoding in separate modules. |
 | IX. Incremental Adoption | PASS | New page; no changes to existing live graph workflow. |
 | X. TypeScript & React Standards | PASS | Functional components, hooks, Backstage plugin architecture, Storybook stories. |
 | XI. Frontend Testing Discipline | PASS | Jest unit tests, Storybook stories for all states, Playwright E2E. |
@@ -53,8 +53,7 @@ specs/005-graph-dashboard-preview/
 ├── quickstart.md        # Phase 1: implementation reference
 ├── contracts/           # Phase 1: TypeScript interface contracts
 │   ├── graph-import.md  # Validation & transformation contracts
-│   ├── shareable-url.md # URL encoding/decoding contracts
-│   └── dot-export.md    # DOT format export contracts
+│   └── shareable-url.md # URL encoding/decoding contracts
 ├── checklists/
 │   └── requirements.md  # Spec quality checklist
 └── tasks.md             # Phase 2 output (created by /speckit.tasks)
@@ -70,8 +69,6 @@ dashboard/
 │           ├── lib/
 │           │   ├── graphImport.ts          # NEW: validate, transform, parse
 │           │   ├── graphImport.test.ts      # NEW: unit tests
-│           │   ├── dotExport.ts             # NEW: DOT export functions
-│           │   ├── dotExport.test.ts         # NEW: unit tests
 │           │   ├── shareableUrl.ts          # NEW: URL encode/decode
 │           │   └── shareableUrl.test.ts      # NEW: unit tests
 │           └── components/
@@ -84,12 +81,9 @@ dashboard/
 │               │   ├── GraphImportPanel.test.tsx   # NEW: unit tests
 │               │   └── __docs__/
 │               │       └── GraphImportPanel.stories.tsx  # NEW: Storybook
-│               ├── previewbanner/
-│               │   ├── PreviewBanner.tsx    # NEW: "Preview" indicator
-│               │   └── PreviewBanner.test.tsx # NEW: unit tests
-│               └── graphactions/
-│                   ├── GraphActions.tsx      # NEW: export/share buttons
-│                   └── GraphActions.test.tsx  # NEW: unit tests
+│               └── previewbanner/
+│                   ├── PreviewBanner.tsx    # NEW: "Preview" indicator
+│                   └── PreviewBanner.test.tsx # NEW: unit tests
 ├── plugins/
 │   └── plugin-radius/
 │       └── src/

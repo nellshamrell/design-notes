@@ -10,7 +10,7 @@
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Includes exact file paths relative to the `dashboard/` repository root
 
 ## Path Conventions
@@ -25,8 +25,8 @@
 
 **Purpose**: Install dependencies and create project scaffolding
 
-- [ ] T001 Add `pako` and `@types/pako` dependencies to `packages/rad-components/package.json` and run `yarn install`
-- [ ] T002 [P] Create directory structure for new components: `packages/rad-components/src/components/graphimport/`, `packages/rad-components/src/components/previewbanner/`, `packages/rad-components/src/components/graphactions/`, `packages/rad-components/src/components/graphimport/__docs__/`, and `plugins/plugin-radius/src/components/preview/`
+- [X] T001 Add `pako` and `@types/pako` dependencies to `packages/rad-components/package.json` and run `yarn install`
+- [X] T002 [P] Create directory structure for new components: `packages/rad-components/src/components/graphimport/`, `packages/rad-components/src/components/previewbanner/`, `packages/rad-components/src/components/graphimport/__docs__/`, and `plugins/plugin-radius/src/components/preview/`
 
 ---
 
@@ -36,11 +36,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Define `ApplicationGraphResponse`, `ApplicationGraphResource`, `ApplicationGraphOutputResource`, and `ApplicationGraphConnection` TypeScript interfaces in `packages/rad-components/src/lib/graphImport.ts` per contracts/graph-import.md input schema
-- [ ] T004 Implement `validateApplicationGraphResponse(data: unknown): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/graphImport.ts` per validation rules V-001 through V-010 from contracts/graph-import.md — must report ALL errors, not just the first
-- [ ] T005 Implement `transformToAppGraph(response: ApplicationGraphResponse, name?: string): AppGraph` in `packages/rad-components/src/lib/graphImport.ts` per transformation rules from contracts/graph-import.md and data-model.md — derive `provider` from `type.split('/')[0]`, enrich connections by looking up target resources, handle missing references gracefully
-- [ ] T006 Implement `parseGraphJson(text: string): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/graphImport.ts` — combines `JSON.parse` + `validateApplicationGraphResponse`, returns `"Invalid JSON: {message}"` on parse error
-- [ ] T007 Write unit tests for all validation, transformation, and parse functions in `packages/rad-components/src/lib/graphImport.test.ts` — cover: valid input, empty resources, missing fields, malformed JSON, unknown connection targets, output resource mapping, provider derivation
+- [X] T003 Define `ApplicationGraphResponse`, `ApplicationGraphResource`, `ApplicationGraphOutputResource`, and `ApplicationGraphConnection` TypeScript interfaces in `packages/rad-components/src/lib/graphImport.ts` per contracts/graph-import.md input schema
+- [X] T004 Implement `validateApplicationGraphResponse(data: unknown): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/graphImport.ts` per validation rules V-001 through V-010 from contracts/graph-import.md — must report ALL errors, not just the first
+- [X] T005 Implement `transformToAppGraph(response: ApplicationGraphResponse, name?: string): AppGraph` in `packages/rad-components/src/lib/graphImport.ts` per transformation rules from contracts/graph-import.md and data-model.md — derive `provider` from `type.split('/')[0]`, enrich connections by looking up target resources, handle missing references gracefully
+- [X] T006 Implement `parseGraphJson(text: string): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/graphImport.ts` — combines `JSON.parse` + `validateApplicationGraphResponse`, returns `"Invalid JSON: {message}"` on parse error
+- [X] T007 Write unit tests for all validation, transformation, and parse functions in `packages/rad-components/src/lib/graphImport.test.ts` — cover: valid input, empty resources, missing fields, malformed JSON, unknown connection targets, output resource mapping, provider derivation
 
 **Checkpoint**: Foundation ready — validation and transformation pipeline is tested and available for all user stories
 
@@ -103,40 +103,19 @@
 - [ ] T028 [US3] Integrate shareable URL into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — on mount, check `window.location.hash` for `graph=` param and auto-decode/render; add "Copy Link" / "Share" button that calls `copyShareUrl`; show error message for too-large graphs ("Graph data is too large to share via URL. Export the JSON file instead."); show error for corrupted shared links
 - [ ] T029 [US3] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — test URL hash decode on mount renders graph, test share button copies URL, test too-large graph shows fallback message, test corrupted URL shows error
 
-**Checkpoint**: User Stories 1, 2, AND 3 complete — shareable URLs work end-to-end
+**Checkpoint**: All three user stories complete — full feature set is functional
 
 ---
 
-## Phase 6: User Story 4 — Export Graph as DOT Format (Priority: P3)
-
-**Goal**: Users can export the current preview graph as a Graphviz DOT file or copy DOT text to clipboard, consistent with the Radius CLI's DOT output format
-
-**Independent Test**: Import a graph, click export, verify downloaded `.dot` file matches expected format and renders correctly with Graphviz
-
-### Implementation for User Story 4
-
-- [ ] T030 [P] [US4] Implement `exportToDot(response, graphName?): string` in `packages/rad-components/src/lib/dotExport.ts` — generate `digraph` with `rankdir=LR`, node styles per contracts/dot-export.md (box/lightblue for Radius resources, ellipse/lightyellow for others), label format `"name\n(type)"`, outbound edges only, deduplicated and sorted, resources sorted by type then name, escape double quotes
-- [ ] T031 [P] [US4] Implement `downloadDotFile(dotContent, filename?)` in `packages/rad-components/src/lib/dotExport.ts` — trigger browser download of DOT content as `graph.dot` (default filename) using Blob + anchor click pattern
-- [ ] T032 [P] [US4] Implement `copyDotToClipboard(dotContent): Promise<void>` in `packages/rad-components/src/lib/dotExport.ts` — copy DOT string to clipboard via `navigator.clipboard.writeText`
-- [ ] T033 [P] [US4] Write unit tests for all DOT export functions in `packages/rad-components/src/lib/dotExport.test.ts` — test DOT output format, node shapes/colors, edge deduplication, sorting, special character escaping, empty graph, download mock, clipboard mock
-- [ ] T034 [US4] Create `GraphActions` component in `packages/rad-components/src/components/graphactions/GraphActions.tsx` — action bar with "Export as DOT" button (calls `downloadDotFile`), "Copy DOT" button (calls `copyDotToClipboard`), "Share" / "Copy Link" button (calls `copyShareUrl`); accepts `response: ApplicationGraphResponse` prop; only renders when graph data is present
-- [ ] T035 [US4] Write unit tests for `GraphActions` in `packages/rad-components/src/components/graphactions/GraphActions.test.tsx` — test all buttons render, click handlers call correct functions, buttons disabled when no data
-- [ ] T036 [US4] Integrate `GraphActions` into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — render `<GraphActions>` below the preview banner when graph data is loaded, pass current `ApplicationGraphResponse` as prop; consolidate share button from US3 into `GraphActions`
-- [ ] T037 [US4] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — verify `GraphActions` renders when graph is loaded, verify export/share actions work through the integrated component
-
-**Checkpoint**: All four user stories complete — full feature set is functional
-
----
-
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 6: Polish & Cross-Cutting Concerns
 
 **Purpose**: E2E tests, documentation, and final refinements across all user stories
 
-- [ ] T038 [P] Create Playwright E2E test in `packages/app/e2e-tests/preview-page.test.ts` (or project-appropriate E2E location) — test: navigate to `/preview`, paste valid JSON, verify graph renders with preview styling, test share URL generation and navigation, test DOT export button triggers download
-- [ ] T039 [P] Update component barrel exports in `packages/rad-components/src/index.ts` to export new components (`GraphImportPanel`, `PreviewBanner`, `GraphActions`) and utility functions (`parseGraphJson`, `transformToAppGraph`, `validateApplicationGraphResponse`, `exportToDot`, `encodeGraphUrl`, `decodeGraphUrl`)
-- [ ] T040 [P] Add Storybook stories for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/__docs__/PreviewBanner.stories.tsx` and `GraphActions` in `packages/rad-components/src/components/graphactions/__docs__/GraphActions.stories.tsx`
-- [ ] T041 Run quickstart.md validation — verify all high-level changes listed in quickstart.md are implemented and functional
-- [ ] T042 Code cleanup — verify all imports are used, remove any TODO comments, ensure consistent error message formatting across validation/decode/export modules
+- [ ] T030 [P] Create Playwright E2E test in `packages/app/e2e-tests/preview-page.test.ts` (or project-appropriate E2E location) — test: navigate to `/preview`, paste valid JSON, verify graph renders with preview styling, test share URL generation and navigation
+- [ ] T031 [P] Update component barrel exports in `packages/rad-components/src/index.ts` to export new components (`GraphImportPanel`, `PreviewBanner`) and utility functions (`parseGraphJson`, `transformToAppGraph`, `validateApplicationGraphResponse`, `encodeGraphUrl`, `decodeGraphUrl`)
+- [ ] T032 [P] Add Storybook stories for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/__docs__/PreviewBanner.stories.tsx`
+- [ ] T033 Run quickstart.md validation — verify all high-level changes listed in quickstart.md are implemented and functional
+- [ ] T034 Code cleanup — verify all imports are used, remove any TODO comments, ensure consistent error message formatting across validation/decode modules
 
 ---
 
@@ -149,15 +128,13 @@
 - **User Story 1 (Phase 3)**: Depends on Foundational (Phase 2) completion
 - **User Story 2 (Phase 4)**: Depends on Foundational (Phase 2) completion; independent of US1 for component work (T018-T021), but integration (T022-T023) requires PreviewPage from US1
 - **User Story 3 (Phase 5)**: Depends on Foundational (Phase 2) completion; lib work (T024-T027) is independent, but integration (T028-T029) requires PreviewPage from US1
-- **User Story 4 (Phase 6)**: Depends on Foundational (Phase 2) completion; lib work (T030-T033) is independent, but integration (T034-T037) requires PreviewPage from US1 and shareableUrl from US3
-- **Polish (Phase 7)**: Depends on all user stories being complete
+- **Polish (Phase 6)**: Depends on all user stories being complete
 
 ### User Story Dependencies
 
 - **User Story 1 (P1)**: Can start after Foundational — no dependencies on other stories
 - **User Story 2 (P2)**: Component creation (T018-T021) can start after Foundational in parallel with US1; integration (T022-T023) requires US1 PreviewPage
 - **User Story 3 (P3)**: Library functions (T024-T027) can start after Foundational in parallel with US1; integration (T028-T029) requires US1 PreviewPage
-- **User Story 4 (P3)**: Library/component (T030-T035) can start after Foundational in parallel; integration (T036-T037) requires US1 PreviewPage and US3 share button
 
 ### Within Each User Story
 
@@ -170,8 +147,7 @@
 **User Story 1**: T008, T009, T010 can run in parallel (different files)
 **User Story 2**: T018, T019, T020, T021 can run in parallel (different files)
 **User Story 3**: T024, T025, T026, T027 can run in parallel (different files)
-**User Story 4**: T030, T031, T032, T033 can run in parallel (different files)
-**Cross-story**: US2 components (T018-T021), US3 lib (T024-T027), and US4 lib (T030-T033) can all run in parallel with US1 implementation
+**Cross-story**: US2 components (T018-T021) and US3 lib (T024-T027) can run in parallel with US1 implementation
 
 ---
 
@@ -200,7 +176,6 @@ Task T017: "Write PreviewPage tests" (depends on T013)
 ```bash
 # These library tasks can ALL run in parallel after Foundational phase:
 Task T024: "Implement encodeGraphUrl in packages/rad-components/src/lib/shareableUrl.ts"  (US3)
-Task T030: "Implement exportToDot in packages/rad-components/src/lib/dotExport.ts"        (US4)
 Task T018: "Modify AppGraph for preview styling"                                            (US2)
 Task T020: "Create PreviewBanner component"                                                 (US2)
 ```
@@ -223,8 +198,7 @@ Task T020: "Create PreviewBanner component"                                     
 2. Add User Story 1 → Test independently → Deploy/Demo (MVP!)
 3. Add User Story 2 → Preview graphs are visually distinct → Deploy/Demo
 4. Add User Story 3 → Shareable URLs work → Deploy/Demo
-5. Add User Story 4 → DOT export works → Deploy/Demo
-6. Polish → E2E tests, Storybook, cleanup → Final release
+5. Polish → E2E tests, Storybook, cleanup → Final release
 
 ### Parallel Team Strategy
 
@@ -234,8 +208,7 @@ With multiple developers:
 2. Once Foundational is done:
    - **Developer A**: User Story 1 (PreviewPage, routing, import panel)
    - **Developer B**: User Story 2 components (AppGraph preview styles, PreviewBanner) + User Story 3 lib (shareableUrl.ts)
-   - **Developer C**: User Story 4 lib (dotExport.ts) + GraphActions component
-3. Integration tasks (T022, T028, T036) happen sequentially after US1 PreviewPage is ready
+3. Integration tasks (T022, T028) happen sequentially after US1 PreviewPage is ready
 
 ---
 
