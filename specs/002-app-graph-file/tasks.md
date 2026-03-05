@@ -67,8 +67,8 @@
 
 **Note**: Implementation is in T009 (Validate branch includes the mutual exclusivity check). This phase adds dedicated tests verifying US2 acceptance scenarios.
 
-- [ ] T012 [US2] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` + positional app name → error message `"--file and application name are mutually exclusive"`
-- [ ] T013 [P] [US2] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: positional app name only (no `--file`) → existing live-mode validation path executes unchanged
+- [X] T012 [US2] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` + positional app name → error message `"--file and application name are mutually exclusive"`
+- [X] T013 [P] [US2] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: positional app name only (no `--file`) → existing live-mode validation path executes unchanged
 
 **Checkpoint**: Mutual exclusivity validated — both conflict and non-conflict paths tested
 
@@ -82,9 +82,9 @@
 
 **Note**: Core warning mechanism is in `resolveExpression` (T003) and `extractResourcesFromTemplate` (T005). This phase adds dedicated tests for degradation scenarios.
 
-- [ ] T014 [US3] Add unit tests for unresolvable expression handling in `pkg/cli/cmd/app/graph/template_test.go` — `[parameters('X')]` → warning + connection skipped, `[format(...)]` → warning + connection skipped, partially resolvable template (some connections resolve, some don't) → partial results + warnings list
-- [ ] T015 [P] [US3] Add unit tests for conditional resource and module reference warnings in `pkg/cli/cmd/app/graph/template_test.go` — resource with `condition` field → included in output + warning, resource with type `Microsoft.Resources/deployments` → warning about module not traversed
-- [ ] T016 [US3] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `unresolvable.json` fixture → partial graph rendered + stderr contains warning messages
+- [X] T014 [US3] Add unit tests for unresolvable expression handling in `pkg/cli/cmd/app/graph/template_test.go` — `[parameters('X')]` → warning + connection skipped, `[format(...)]` → warning + connection skipped, partially resolvable template (some connections resolve, some don't) → partial results + warnings list
+- [X] T015 [P] [US3] Add unit tests for conditional resource and module reference warnings in `pkg/cli/cmd/app/graph/template_test.go` — resource with `condition` field → included in output + warning, resource with type `Microsoft.Resources/deployments` → warning about module not traversed
+- [X] T016 [US3] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `unresolvable.json` fixture → partial graph rendered + stderr contains warning messages
 
 **Checkpoint**: Graceful degradation verified — unresolvable connections warn, don't break
 
@@ -98,8 +98,8 @@
 
 **Note**: Offline operation is inherent in the design — `--file` mode never calls Radius APIs. This phase adds tests confirming the offline guarantee and JSON output for CI pipelines.
 
-- [ ] T017 [US4] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` mode with no workspace or environment configured → command succeeds without error (verifies Validate skips workspace resolution)
-- [ ] T018 [P] [US4] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` + `--output json` → valid JSON output conforming to `ApplicationGraphResponse` schema with `provisioningState: "NotDeployed"` and empty `outputResources` on all resources
+- [X] T017 [US4] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` mode with no workspace or environment configured → command succeeds without error (verifies Validate skips workspace resolution)
+- [X] T018 [P] [US4] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` + `--output json` → valid JSON output conforming to `ApplicationGraphResponse` schema with `provisioningState: "NotDeployed"` and empty `outputResources` on all resources
 
 **Checkpoint**: Offline and CI-pipeline use cases validated
 
@@ -111,9 +111,9 @@
 
 **Independent Test**: Create Bicep files with 0 and 2 application resources, verify implicit-app and error behaviors respectively
 
-- [ ] T019 [US5] Add unit tests for `scopeToApplication` edge cases in `pkg/cli/cmd/app/graph/template_test.go` — 0 apps → returns all resources with empty app name, 1 app → returns filtered resources with app name, 2 apps → returns error mentioning multiple applications
-- [ ] T020 [US5] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `no-app.json` → all resources displayed in implicit application graph
-- [ ] T021 [P] [US5] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `multi-app.json` → error message indicating multiple applications found
+- [X] T019 [US5] Add unit tests for `scopeToApplication` edge cases in `pkg/cli/cmd/app/graph/template_test.go` — 0 apps → returns all resources with empty app name, 1 app → returns filtered resources with app name, 2 apps → returns error mentioning multiple applications
+- [X] T020 [US5] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `no-app.json` → all resources displayed in implicit application graph
+- [X] T021 [P] [US5] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `multi-app.json` → error message indicating multiple applications found
 
 **Checkpoint**: All application scoping behaviors verified — 0/1/many cases handled correctly
 
@@ -130,7 +130,7 @@
 - [X] T022 [US6] Create `pkg/cli/cmd/app/graph/display_dot.go` with `displayDot(resources []*ApplicationGraphResource, appName string) string` — produce valid Graphviz DOT digraph with `rankdir=LR`, Radius resource nodes as boxes (lightblue fill, label `name\n(type)`), non-Radius resource nodes as ellipses (lightyellow fill), directed edges for outbound connections, deduplicated edges, deterministic ordering
 - [X] T023 [US6] Create `pkg/cli/cmd/app/graph/display_dot_test.go` with unit tests — single resource (valid digraph wrapper + one node), two resources with connection (node + directed edge), non-Radius resource (ellipse shape, lightyellow), empty resources (empty digraph), deterministic output (same input → same output), special characters in names are escaped
 - [X] T024 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `simple-app.json` + `--output dot` → output starts with `digraph`, contains node labels matching resource names and types, contains edge `->` for connections
-- [ ] T025 [P] [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `non-radius.json` + `--output dot` → non-Radius resources use `shape=ellipse` and `fillcolor=lightyellow`
+- [X] T025 [P] [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: `--file` with `non-radius.json` + `--output dot` → non-Radius resources use `shape=ellipse` and `fillcolor=lightyellow`
 - [X] T026 [US6] Modify live-mode `Run()` branch in `pkg/cli/cmd/app/graph/graph.go` to handle `--output dot` — after `computeGraph()` returns in the existing live path, add format switch case for `"dot"` calling `displayDot(response.Resources, appName)` so that `rad app graph myapp --output dot` works without `--file`
 - [X] T027 [US6] Add integration test in `pkg/cli/cmd/app/graph/graph_test.go`: live-mode `rad app graph myapp --output dot` → output starts with `digraph`, contains expected node labels and edges (requires mock API client returning test resources)
 
@@ -154,9 +154,9 @@
 
 - [X] T028a Fix error output routing in `cmd/rad/cmd/root.go`: change all `fmt.Println`/`fmt.Printf` calls in `Execute()` and `handlePanic()` to write to `os.Stderr` instead of stdout — ensures errors never pollute piped output (e.g., `--output dot | dot -Tpng`)
 - [X] T028b Fix Bicep progress output routing in `cmd/rad/cmd/root.go`: change the Bicep client's `Output` writer from `RootCmd.OutOrStdout()` to `RootCmd.ErrOrStderr()` in `initSubCommands()` — ensures `PrepareTemplate()` progress messages (`"Building ..."`, `"Downloading Bicep ..."`) go to stderr, preventing corruption of piped DOT/JSON output
-- [ ] T028 [P] Add godoc comments to all exported functions and types in `pkg/cli/cmd/app/graph/template.go` and `pkg/cli/cmd/app/graph/display_dot.go`
-- [ ] T029 [P] Update `rad app graph` reference documentation in docs repo to document the `--file` flag, `--output dot` format, file mode behavior, and example usage including `--output dot | dot -Tpng -o graph.png`
-- [ ] T030 Run quickstart.md success verification checklist end-to-end (11 verification items)
+- [X] T028 [P] Add godoc comments to all exported functions and types in `pkg/cli/cmd/app/graph/template.go` and `pkg/cli/cmd/app/graph/display_dot.go`
+- [X] T029 [P] Update `rad app graph` reference documentation in docs repo to document the `--file` flag, `--output dot` format, file mode behavior, and example usage including `--output dot | dot -Tpng -o graph.png`
+- [X] T030 Run quickstart.md success verification checklist end-to-end (11 verification items)
 
 ---
 
