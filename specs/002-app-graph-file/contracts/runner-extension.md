@@ -82,7 +82,7 @@ func (r *Runner) Run(ctx context.Context) error
 
 The `BicepClient` field enables mock-based testing without invoking the real Bicep compiler.
 
-- **Production**: `NewRunner()` initializes `BicepClient` via `bicep.NewImpl(...)` (or deferred to `Run()`)
+- **Production**: `NewRunner()` initializes `BicepClient` via `factory.GetBicep()`. The Bicep `Impl` is configured in `cmd/rad/cmd/root.go` `initSubCommands()` with its `Output` writer set to `RootCmd.ErrOrStderr()` so that progress messages (`"Building ..."`, `"Downloading Bicep ..."`) go to stderr and don't pollute piped stdout output (DOT, JSON).
 - **Tests**: Inject `mock_bicep.MockInterface` returning pre-built ARM JSON templates
 
 ## `computeGraph` Visibility

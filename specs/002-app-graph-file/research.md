@@ -147,7 +147,7 @@ A resource is an application resource if its type (after stripping API version) 
 
 | Component | Reuse Strategy |
 |-----------|---------------|
-| `PrepareTemplate()` | Direct call — handles both `.bicep` and `.json` |
+| `PrepareTemplate()` | Direct call — handles both `.bicep` and `.json`. Progress output (`"Building ..."`) routed to stderr via Bicep `OutputWriter` backed by `RootCmd.ErrOrStderr()` |
 | `computeGraph()` | Direct call — accepts `[]GenericResource`, returns `*ApplicationGraphResponse` |
 | `findSourceResource()` | Indirect — used internally by `computeGraph()`, no changes needed |
 | `display()` | Direct call — renders graph to text |

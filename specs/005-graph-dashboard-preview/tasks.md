@@ -54,16 +54,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Create `GraphImportPanel` component in `packages/rad-components/src/components/graphimport/GraphImportPanel.tsx` — text area for JSON paste, file upload input (`.json` files), error display for validation failures, loading state; calls `parseGraphJson` on submit and `onImport(response)` callback on success
-- [ ] T009 [P] [US1] Write unit tests for `GraphImportPanel` in `packages/rad-components/src/components/graphimport/GraphImportPanel.test.tsx` — test paste valid JSON renders success callback, paste invalid JSON shows error messages, file upload triggers parse, empty input handling
-- [ ] T010 [P] [US1] Create Storybook stories for `GraphImportPanel` in `packages/rad-components/src/components/graphimport/__docs__/GraphImportPanel.stories.tsx` — stories: Empty state, With validation error, With loaded data
-- [ ] T011 [US1] Add `previewPageRouteRef` to `plugins/plugin-radius/src/routes.ts` — create route ref with id `'radius-preview-page'`
-- [ ] T012 [US1] Add `PreviewPage` routable extension to `plugins/plugin-radius/src/plugin.ts` — lazy-load `PreviewPage` component, bind to `previewPageRouteRef`
-- [ ] T013 [US1] Create `PreviewPage` component in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — renders `GraphImportPanel`, on successful import calls `transformToAppGraph` and passes result to `<AppGraph>`, shows empty state message for zero-resource graphs ("No resources found in the imported graph"), displays large graph warning when resources > 50 or connections > 100, silently replaces current graph on re-import
-- [ ] T014 [US1] Export `PreviewPage` and `previewPageRouteRef` from `plugins/plugin-radius/src/index.ts`
-- [ ] T015 [US1] Add `/preview` route to `packages/app/src/App.tsx` — `<Route path="/preview" element={<PreviewPage />} />`
-- [ ] T016 [US1] Add "Preview" sidebar item to `packages/app/src/components/Root/Root.tsx` — new `SidebarItem` with appropriate icon (e.g., `Visibility` or `Preview`)
-- [ ] T017 [US1] Write unit tests for `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — test: renders import panel, valid import shows graph, invalid import shows errors, empty graph shows message, large graph shows warning, re-import replaces graph
+- [X] T008 [P] [US1] Create `GraphImportPanel` component in `packages/rad-components/src/components/graphimport/GraphImportPanel.tsx` — text area for JSON paste, file upload input (`.json` files), error display for validation failures, loading state; calls `parseGraphJson` on submit and `onImport(response)` callback on success
+- [X] T009 [P] [US1] Write unit tests for `GraphImportPanel` in `packages/rad-components/src/components/graphimport/GraphImportPanel.test.tsx` — test paste valid JSON renders success callback, paste invalid JSON shows error messages, file upload triggers parse, empty input handling
+- [X] T010 [P] [US1] Create Storybook stories for `GraphImportPanel` in `packages/rad-components/src/components/graphimport/__docs__/GraphImportPanel.stories.tsx` — stories: Empty state, With validation error, With loaded data
+- [X] T011 [US1] Add `previewPageRouteRef` to `plugins/plugin-radius/src/routes.ts` — create route ref with id `'radius-preview-page'`
+- [X] T012 [US1] Add `PreviewPage` routable extension to `plugins/plugin-radius/src/plugin.ts` — lazy-load `PreviewPage` component, bind to `previewPageRouteRef`
+- [X] T013 [US1] Create `PreviewPage` component in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — renders `GraphImportPanel`, on successful import calls `transformToAppGraph` and passes result to `<AppGraph>`, shows empty state message for zero-resource graphs ("No resources found in the imported graph"), displays large graph warning when resources > 50 or connections > 100, silently replaces current graph on re-import
+- [X] T014 [US1] Export `PreviewPage` and `previewPageRouteRef` from `plugins/plugin-radius/src/index.ts`
+- [X] T015 [US1] Add `/preview` route to `packages/app/src/App.tsx` — `<Route path="/preview" element={<PreviewPage />} />`
+- [X] T016 [US1] Add "Preview" sidebar item to `packages/app/src/components/Root/Root.tsx` — new `SidebarItem` with appropriate icon (e.g., `Visibility` or `Preview`)
+- [X] T017 [US1] Write unit tests for `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — test: renders import panel, valid import shows graph, invalid import shows errors, empty graph shows message, large graph shows warning, re-import replaces graph
 
 **Checkpoint**: User Story 1 complete — users can navigate to `/preview`, paste or upload JSON, and see the rendered graph. This is the MVP.
 
