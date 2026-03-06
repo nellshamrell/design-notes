@@ -77,12 +77,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Modify `AppGraph` component in `packages/rad-components/src/components/appgraph/AppGraph.tsx` — add optional `isPreview?: boolean` prop; when `true`, apply dashed edge styles (not animated), pass `isPreview` flag through node data to `ResourceNode`
-- [ ] T019 [P] [US2] Modify `ResourceNode` component in `packages/rad-components/src/components/resourcenode/ResourceNode.tsx` — read `isPreview` from node data; when `true`, render dashed border, muted background color, and "Not Deployed" status badge
-- [ ] T020 [P] [US2] Create `PreviewBanner` component in `packages/rad-components/src/components/previewbanner/PreviewBanner.tsx` — prominent banner above graph area showing "Preview" label, distinct styling (color, icon), brief explanatory text (e.g., "This graph was imported from a file and does not represent a deployed application")
-- [ ] T021 [P] [US2] Write unit tests for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/PreviewBanner.test.tsx` — test banner renders with correct text and styling
-- [ ] T022 [US2] Integrate `PreviewBanner` into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — render `<PreviewBanner />` above the graph when data is loaded; pass `isPreview={true}` to `<AppGraph>`
-- [ ] T023 [US2] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — verify preview banner renders when graph is loaded, verify `isPreview` prop is passed to `AppGraph`
+- [X] T018 [P] [US2] Modify `AppGraph` component in `packages/rad-components/src/components/appgraph/AppGraph.tsx` — add optional `isPreview?: boolean` prop; when `true`, apply dashed edge styles (not animated), pass `isPreview` flag through node data to `ResourceNode`
+- [X] T019 [P] [US2] Modify `ResourceNode` component in `packages/rad-components/src/components/resourcenode/ResourceNode.tsx` — read `isPreview` from node data; when `true`, render dashed border, muted background color, and "Not Deployed" status badge
+- [X] T020 [P] [US2] Create `PreviewBanner` component in `packages/rad-components/src/components/previewbanner/PreviewBanner.tsx` — prominent banner above graph area showing "Preview" label, distinct styling (color, icon), brief explanatory text (e.g., "This graph was imported from a file and does not represent a deployed application")
+- [X] T021 [P] [US2] Write unit tests for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/PreviewBanner.test.tsx` — test banner renders with correct text and styling
+- [X] T022 [US2] Integrate `PreviewBanner` into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — render `<PreviewBanner />` above the graph when data is loaded; pass `isPreview={true}` to `<AppGraph>`
+- [X] T023 [US2] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — verify preview banner renders when graph is loaded, verify `isPreview` prop is passed to `AppGraph`
 
 **Checkpoint**: User Stories 1 AND 2 complete — preview graphs are visually distinct from live graphs with all distinction cues present
 
@@ -96,12 +96,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T024 [P] [US3] Implement `encodeGraphUrl(response, baseUrl): EncodeResult` in `packages/rad-components/src/lib/shareableUrl.ts` — serialize to minified JSON, compress with pako deflate, Base64 URL-safe encode, construct URL with `#graph=` prefix, return error if URL > 64,000 chars per contracts/shareable-url.md
-- [ ] T025 [P] [US3] Implement `decodeGraphUrl(hash): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/shareableUrl.ts` — extract `graph=` param from hash, Base64 URL-safe decode, inflate with pako, JSON parse, validate with `validateApplicationGraphResponse`, handle all error cases per contracts/shareable-url.md
-- [ ] T026 [P] [US3] Implement `copyShareUrl(response): Promise<EncodeResult>` in `packages/rad-components/src/lib/shareableUrl.ts` — calls `encodeGraphUrl`, updates `window.location.hash`, copies URL to clipboard via `navigator.clipboard.writeText`
-- [ ] T027 [P] [US3] Write unit tests for all shareable URL functions in `packages/rad-components/src/lib/shareableUrl.test.ts` — test encode/decode roundtrip, URL length limit error, invalid Base64 decode, corrupted data decode, missing graph param, clipboard mock
-- [ ] T028 [US3] Integrate shareable URL into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — on mount, check `window.location.hash` for `graph=` param and auto-decode/render; add "Copy Link" / "Share" button that calls `copyShareUrl`; show error message for too-large graphs ("Graph data is too large to share via URL. Export the JSON file instead."); show error for corrupted shared links
-- [ ] T029 [US3] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — test URL hash decode on mount renders graph, test share button copies URL, test too-large graph shows fallback message, test corrupted URL shows error
+- [X] T024 [P] [US3] Implement `encodeGraphUrl(response, baseUrl): EncodeResult` in `packages/rad-components/src/lib/shareableUrl.ts` — serialize to minified JSON, compress with pako deflate, Base64 URL-safe encode, construct URL with `#graph=` prefix, return error if URL > 64,000 chars per contracts/shareable-url.md
+- [X] T025 [P] [US3] Implement `decodeGraphUrl(hash): ValidationResult<ApplicationGraphResponse>` in `packages/rad-components/src/lib/shareableUrl.ts` — extract `graph=` param from hash, Base64 URL-safe decode, inflate with pako, JSON parse, validate with `validateApplicationGraphResponse`, handle all error cases per contracts/shareable-url.md
+- [X] T026 [P] [US3] Implement `copyShareUrl(response): Promise<EncodeResult>` in `packages/rad-components/src/lib/shareableUrl.ts` — calls `encodeGraphUrl`, updates `window.location.hash`, copies URL to clipboard via `navigator.clipboard.writeText`
+- [X] T027 [P] [US3] Write unit tests for all shareable URL functions in `packages/rad-components/src/lib/shareableUrl.test.ts` — test encode/decode roundtrip, URL length limit error, invalid Base64 decode, corrupted data decode, missing graph param, clipboard mock
+- [X] T028 [US3] Integrate shareable URL into `PreviewPage` in `plugins/plugin-radius/src/components/preview/PreviewPage.tsx` — on mount, check `window.location.hash` for `graph=` param and auto-decode/render; add "Copy Link" / "Share" button that calls `copyShareUrl`; show error message for too-large graphs ("Graph data is too large to share via URL. Export the JSON file instead."); show error for corrupted shared links
+- [X] T029 [US3] Update `PreviewPage` tests in `plugins/plugin-radius/src/components/preview/PreviewPage.test.tsx` — test URL hash decode on mount renders graph, test share button copies URL, test too-large graph shows fallback message, test corrupted URL shows error
 
 **Checkpoint**: All three user stories complete — full feature set is functional
 
@@ -111,11 +111,11 @@
 
 **Purpose**: E2E tests, documentation, and final refinements across all user stories
 
-- [ ] T030 [P] Create Playwright E2E test in `packages/app/e2e-tests/preview-page.test.ts` (or project-appropriate E2E location) — test: navigate to `/preview`, paste valid JSON, verify graph renders with preview styling, test share URL generation and navigation
-- [ ] T031 [P] Update component barrel exports in `packages/rad-components/src/index.ts` to export new components (`GraphImportPanel`, `PreviewBanner`) and utility functions (`parseGraphJson`, `transformToAppGraph`, `validateApplicationGraphResponse`, `encodeGraphUrl`, `decodeGraphUrl`)
-- [ ] T032 [P] Add Storybook stories for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/__docs__/PreviewBanner.stories.tsx`
-- [ ] T033 Run quickstart.md validation — verify all high-level changes listed in quickstart.md are implemented and functional
-- [ ] T034 Code cleanup — verify all imports are used, remove any TODO comments, ensure consistent error message formatting across validation/decode modules
+- [X] T030 [P] Create Playwright E2E test in `packages/app/e2e-tests/preview-page.test.ts` (or project-appropriate E2E location) — test: navigate to `/preview`, paste valid JSON, verify graph renders with preview styling, test share URL generation and navigation
+- [X] T031 [P] Update component barrel exports in `packages/rad-components/src/index.ts` to export new components (`GraphImportPanel`, `PreviewBanner`) and utility functions (`parseGraphJson`, `transformToAppGraph`, `validateApplicationGraphResponse`, `encodeGraphUrl`, `decodeGraphUrl`)
+- [X] T032 [P] Add Storybook stories for `PreviewBanner` in `packages/rad-components/src/components/previewbanner/__docs__/PreviewBanner.stories.tsx`
+- [X] T033 Run quickstart.md validation — verify all high-level changes listed in quickstart.md are implemented and functional
+- [X] T034 Code cleanup — verify all imports are used, remove any TODO comments, ensure consistent error message formatting across validation/decode modules
 
 ---
 
